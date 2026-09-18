@@ -31,9 +31,10 @@ two folders without touching each other's files.
 
 ```bash
 cd ml-service
-python -m venv .venv && .venv\Scripts\activate    # macOS/Linux: source .venv/bin/activate
+py -m venv .venv && .venv\Scripts\activate    # macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env                              # fill in the values
+python -m app.train                               # builds app/model.pkl (~2s)
 uvicorn app.main:app --reload                     # http://localhost:8000/docs
 ```
 
@@ -41,6 +42,13 @@ Google Earth Engine (one-time, only needed for the GEE script in step 4):
 
 ```bash
 earthengine authenticate
+```
+
+Populate `satellite_features` for a farm (manual, run once per farm):
+
+```bash
+cd ml-service
+python -m scripts.fetch_satellite_data <farm_id> --start 2025-01-15 --end 2025-03-15
 ```
 
 ## 3. frontend
@@ -59,6 +67,6 @@ Run both at once — two terminals. The frontend expects ml-service on
 
 - [x] 1. Project structure
 - [x] 2. Schema + RLS migration
-- [ ] 3. FastAPI `/predict` + synthetic-trained Random Forest
-- [ ] 4. GEE Sentinel-2 script + `GET /farms/{id}/predict`
-- [ ] 5. React auth, farm form, dashboard
+- [x] 3. FastAPI `/predict` + synthetic-trained Random Forest
+- [x] 4. GEE Sentinel-2 script + `GET /farms/{id}/predict`
+- [x] 5. React auth, farm form, dashboard
