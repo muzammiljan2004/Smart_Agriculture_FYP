@@ -9,12 +9,14 @@ from functools import lru_cache
 import ee
 from dotenv import load_dotenv
 
+from app.districts import DISTRICTS
+
 load_dotenv()
 
-# Sheikhupura district, Punjab -- approximate. (lng_min, lat_min, lng_max, lat_max)
-# GEE takes lng first; getting this backwards silently samples somewhere in
-# Central Asia rather than erroring, so the order matters more than it looks.
-SHEIKHUPURA_BBOX = (73.60, 31.40, 74.35, 32.00)
+# Bounding boxes now live in app/districts.py so the scripts, the migration
+# and the frontend cannot drift apart. GEE takes lng first; getting that
+# backwards silently samples Central Asia rather than erroring.
+SHEIKHUPURA_BBOX = DISTRICTS["Sheikhupura"]
 
 # Scene Classification Layer classes worth keeping. 4=vegetation, 5=bare soil,
 # 6=water, 7=unclassified. Dropped: 3=cloud shadow, 8/9=cloud medium+high

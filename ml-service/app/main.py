@@ -7,19 +7,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from app.db import db
-from app.train import FEATURES, MODEL_NAME, MODEL_PATH
+from app.districts import CROPS, INDEX_FEATURES, one_hot
+from app.train import MODEL_PATH
 
-_model = None
+FEATURES = INDEX_FEATURES
+_bundle = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load the pickle once at startup, not per request -- unpickling a
     200-tree forest on every call would dominate the response time."""
-    global _model
+    global _bundle
     if not MODEL_PATH.exists():
         raise RuntimeError(f"{MODEL_PATH} missing. Run: python -m app.train")
-    _model = joblib.load(MODEL_PATH)
+    _bundle = joblib.load(MODEL_PATH)
+    missing = [c for c in CROPS if c not in _bundle["trained_crops"]]
+    if missing:
+        print(f"WARNING: model has no training rows for {missing}; those crops will be refused.")
     yield
 
 
@@ -48,7 +53,8 @@ class Prediction(BaseModel):
     predicted_yield: float
     confidence_interval: list[float]
     unit: str = "t/ha"
-    model_used: str = MODEL_NAME
+    model_used: str
+    crop_type: str
     # Populated only by /farms/{id}/predict -- the dashboard shows the actual
     # Sentinel-2 values behind the number instead of asking you to trust it.
     features: dict | None = None
@@ -56,19 +62,29 @@ class Prediction(BaseModel):
 
 
 def predict(f: Features) -> Prediction:
-    """Shared by POST /predict and (step 4) GET /farms/{id}/predict."""
-    if f.crop_type != "wheat":
-        # The model was trained on wheat only. Silently predicting for maize
-        # would return a confident, wrong number -- worse than a 400.
-        raise HTTPException(400, f"model only supports wheat, got {f.crop_type!r}")
+    """Shared by POST /predict and GET /farms/{id}/predict."""
+    if f.crop_type not in CROPS:
+        raise HTTPException(400, f"unknown crop {f.crop_type!r}; expected one of {list(CROPS)}")
 
-    x = np.array([[getattr(f, name) for name in FEATURES]])
+    # The guard that makes the crop dimension honest. A Random Forest given an
+    # unseen one-hot column does not fail -- it falls back to whatever leaf is
+    # nearest, which here means returning a wheat yield for rice. Refusing is
+    # the only way the caller finds out the model has never seen this crop.
+    if f.crop_type not in _bundle["trained_crops"]:
+        raise HTTPException(
+            422,
+            f"model has no training rows for {f.crop_type!r} (trained on: "
+            f"{_bundle['trained_crops']}). Add {f.crop_type} seasons to "
+            f"data/training.csv with PBS yields and re-run python -m app.train.",
+        )
+
+    x = np.array([[getattr(f, name) for name in INDEX_FEATURES] + one_hot(f.crop_type)])
 
     # Spread across the trees as the interval. ponytail: this is model
     # disagreement, not a calibrated prediction interval -- it ignores the
     # irreducible field-level noise, so it reads narrow. Swap for quantile
     # regression forests once real yield data exists.
-    votes = np.array([t.predict(x)[0] for t in _model.estimators_])
+    votes = np.array([t.predict(x)[0] for t in _bundle["model"].estimators_])
 
     return Prediction(
         predicted_yield=round(float(votes.mean()), 2),
@@ -76,12 +92,20 @@ def predict(f: Features) -> Prediction:
             round(float(np.percentile(votes, 10)), 2),
             round(float(np.percentile(votes, 90)), 2),
         ],
+        model_used=_bundle["model_name"],
+        crop_type=f.crop_type,
     )
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "model": MODEL_NAME, "loaded": _model is not None}
+    return {
+        "status": "ok",
+        "model": _bundle["model_name"] if _bundle else None,
+        "trained_crops": _bundle["trained_crops"] if _bundle else [],
+        "training_source": _bundle["source"] if _bundle else None,
+        "training_rows": _bundle["n_rows"] if _bundle else 0,
+    }
 
 
 @app.post("/predict", response_model=Prediction)
@@ -98,7 +122,7 @@ def predict_for_farm(farm_id: str):
     directly (see the migration). The farm_id is supplied by the browser and is
     NOT ownership-checked here -- see the note at the bottom of this file.
     """
-    farm = db().table("farms").select("crop_type").eq("id", farm_id).execute()
+    farm = db().table("farms").select("crop_type, district").eq("id", farm_id).execute()
     if not farm.data:
         raise HTTPException(404, f"no farm {farm_id}")
 
@@ -118,11 +142,13 @@ def predict_for_farm(farm_id: str):
         )
 
     row = feats.data[0]
-    if any(row[k] is None for k in FEATURES):
+    if any(row[k] is None for k in INDEX_FEATURES):
         raise HTTPException(422, f"incomplete indices for {row['date']}: {row}")
 
-    result = predict(Features(crop_type=farm.data[0]["crop_type"], **{k: row[k] for k in FEATURES}))
-    result.features = {k: row[k] for k in FEATURES}
+    result = predict(
+        Features(crop_type=farm.data[0]["crop_type"], **{k: row[k] for k in INDEX_FEATURES})
+    )
+    result.features = {k: row[k] for k in INDEX_FEATURES}
     result.feature_date = row["date"]
 
     lo, hi = result.confidence_interval

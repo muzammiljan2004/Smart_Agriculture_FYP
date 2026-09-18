@@ -1,9 +1,19 @@
 import { useState } from 'react'
 import { supabase } from './supabase'
 
-// Sheikhupura city centre — a sane starting point so the demo isn't typing
-// coordinates from scratch.
-const DEFAULT = { lat: '31.7131', lng: '73.9783' }
+// Must match DISTRICTS in ml-service/app/districts.py and the CHECK constraint
+// in the migration. Centres are the district towns -- used to reposition the
+// coordinate inputs when the district changes, so the map does not open on the
+// wrong side of Punjab.
+export const DISTRICTS = {
+  Sheikhupura: { lat: '31.7131', lng: '73.9783' },
+  Okara: { lat: '30.8103', lng: '73.4459' },
+  Sahiwal: { lat: '30.6682', lng: '73.1114' },
+}
+
+// Season is derived, not chosen: the DB has a CHECK that rejects any other
+// pairing, so offering it as a separate input could only produce errors.
+const SEASON = { wheat: 'rabi', rice: 'kharif' }
 
 const field =
   'mt-1.5 w-full rounded-xl border border-leaf-100 bg-white px-4 py-3 text-ink ' +
@@ -11,11 +21,22 @@ const field =
   'disabled:bg-leaf-50/60 disabled:text-muted'
 
 export default function FarmForm({ onCreated }) {
-  const [form, setForm] = useState({ farmer_name: '', gps_lat: DEFAULT.lat, gps_lng: DEFAULT.lng })
+  const [form, setForm] = useState({
+    farmer_name: '',
+    district: 'Sheikhupura',
+    crop_type: 'wheat',
+    gps_lat: DISTRICTS.Sheikhupura.lat,
+    gps_lng: DISTRICTS.Sheikhupura.lng,
+  })
   const [err, setErr] = useState(null)
   const [busy, setBusy] = useState(false)
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
+
+  function setDistrict(e) {
+    const d = e.target.value
+    setForm({ ...form, district: d, gps_lat: DISTRICTS[d].lat, gps_lng: DISTRICTS[d].lng })
+  }
 
   async function submit(e) {
     e.preventDefault()
@@ -32,8 +53,9 @@ export default function FarmForm({ onCreated }) {
         farmer_name: form.farmer_name,
         gps_lat: parseFloat(form.gps_lat),
         gps_lng: parseFloat(form.gps_lng),
-        district: 'Sheikhupura',
-        crop_type: 'wheat',
+        district: form.district,
+        crop_type: form.crop_type,
+        season: SEASON[form.crop_type],
       })
       .select()
       .single()
@@ -59,38 +81,59 @@ export default function FarmForm({ onCreated }) {
       <form onSubmit={submit} className="rounded-2xl bg-white p-7 shadow-sm ring-1 ring-leaf-100">
         <label className="block text-sm font-medium">
           Farmer name
-          <input required value={form.farmer_name} onChange={set('farmer_name')}
-                 placeholder="e.g. Muhammad Aslam" className={field} />
+          <input
+            required
+            value={form.farmer_name}
+            onChange={set('farmer_name')}
+            placeholder="e.g. Muhammad Aslam"
+            className={field}
+          />
         </label>
 
         <div className="mt-5 grid grid-cols-2 gap-4">
           <label className="block text-sm font-medium">
-            Latitude
-            <input type="number" step="any" required min={-90} max={90}
-                   value={form.gps_lat} onChange={set('gps_lat')} className={`${field} tnum`} />
-          </label>
-          <label className="block text-sm font-medium">
-            Longitude
-            <input type="number" step="any" required min={-180} max={180}
-                   value={form.gps_lng} onChange={set('gps_lng')} className={`${field} tnum`} />
-          </label>
-        </div>
-        <p className="mt-2 text-xs text-muted">Prefilled with Sheikhupura centre — adjust to your plot.</p>
-
-        <div className="mt-5 grid grid-cols-2 gap-4">
-          <label className="block text-sm font-medium">
-            Crop
-            <select value="wheat" disabled className={field}>
-              <option value="wheat">Wheat</option>
+            District
+            <select value={form.district} onChange={setDistrict} className={field}>
+              {Object.keys(DISTRICTS).map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
             </select>
           </label>
           <label className="block text-sm font-medium">
-            District
-            <input value="Sheikhupura" disabled className={field} />
+            Crop
+            <select value={form.crop_type} onChange={set('crop_type')} className={field}>
+              <option value="wheat">Wheat (rabi)</option>
+              <option value="rice">Rice (kharif)</option>
+            </select>
+          </label>
+        </div>
+
+        {form.crop_type === 'rice' && (
+          <p className="mt-3 rounded-xl bg-wheat-300/25 px-4 py-3 text-xs leading-relaxed text-wheat-500 ring-1 ring-wheat-300/50">
+            <strong className="font-semibold">Rice has no training data yet.</strong> The farm
+            saves fine and imagery will be pulled for the kharif window, but the model will
+            refuse to predict until rice seasons and PBS rice yields are added.
+          </p>
+        )}
+
+        <div className="mt-5 grid grid-cols-2 gap-4">
+          <label className="block text-sm font-medium">
+            Latitude
+            <input
+              type="number" step="any" required min={-90} max={90}
+              value={form.gps_lat} onChange={set('gps_lat')} className={`${field} tnum`}
+            />
+          </label>
+          <label className="block text-sm font-medium">
+            Longitude
+            <input
+              type="number" step="any" required min={-180} max={180}
+              value={form.gps_lng} onChange={set('gps_lng')} className={`${field} tnum`}
+            />
           </label>
         </div>
         <p className="mt-2 text-xs text-muted">
-          Locked for this release — one district, one crop.
+          Prefilled with {form.district} town centre — adjust to your plot.
         </p>
 
         {err && (
@@ -99,9 +142,11 @@ export default function FarmForm({ onCreated }) {
           </p>
         )}
 
-        <button type="submit" disabled={busy}
-                className="mt-7 w-full rounded-xl bg-leaf-700 py-3 font-medium text-white shadow-sm
-                           transition hover:bg-leaf-800 active:scale-[.99] disabled:opacity-60">
+        <button
+          type="submit" disabled={busy}
+          className="mt-7 w-full rounded-xl bg-leaf-700 py-3 font-medium text-white shadow-sm
+                     transition hover:bg-leaf-800 active:scale-[.99] disabled:opacity-60"
+        >
           {busy ? 'Saving…' : 'Register farm'}
         </button>
       </form>

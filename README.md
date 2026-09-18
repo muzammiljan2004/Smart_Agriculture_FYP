@@ -44,12 +44,25 @@ Google Earth Engine (one-time, only needed for the GEE script in step 4):
 earthengine authenticate
 ```
 
-Populate `satellite_features` for a farm (manual, run once per farm):
+Populate `satellite_features` for a farm (bbox + dates come from the farm's
+district and crop):
 
 ```bash
 cd ml-service
-python -m scripts.fetch_satellite_data <farm_id> --start 2025-01-15 --end 2025-03-15
+python -m scripts.fetch_satellite_data <farm_id>
 ```
+
+Build the training CSV (3 districts x 5 seasons):
+
+```bash
+python -m scripts.fetch_historical_ndvi              # wheat / rabi
+python -m scripts.fetch_historical_ndvi --crop rice  # rice / kharif
+```
+
+Then fill `yield_t_ha` in `ml-service/data/training.csv` from PBS district
+yield tables and re-run `python -m app.train`. **Until rice rows have yields,
+the model refuses rice predictions with a 422** rather than returning a
+wheat-shaped guess — see `trained_crops` in `GET /health`.
 
 ## 3. frontend
 

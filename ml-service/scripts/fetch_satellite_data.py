@@ -3,34 +3,59 @@
     python -m scripts.fetch_satellite_data <farm_id>
     python -m scripts.fetch_satellite_data <farm_id> --start 2025-01-15 --end 2025-03-15
 
-Run manually for now; scheduling is a later phase.
+The bounding box and date window are derived from the farm's own district and
+crop, so the same command works for any of the three districts. Run manually
+for now; scheduling is a later phase.
 """
 import argparse
 import sys
 
 from app.db import db
-from app.gee import SHEIKHUPURA_BBOX, fetch_indices
+from app.districts import DISTRICTS, season_window
+from app.gee import fetch_indices
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("farm_id")
-    ap.add_argument("--start", default="2025-01-15", help="rabi peak vegetative growth")
-    ap.add_argument("--end", default="2025-03-15")
+    ap.add_argument("--season", help="rabi '2024-25' or kharif '2024'; default: latest")
+    ap.add_argument("--start", help="override the season window")
+    ap.add_argument("--end", help="override the season window")
     args = ap.parse_args()
 
     # Confirm the farm exists first. A farm_id typo would otherwise fail on the
     # foreign key AFTER a slow GEE round trip -- fail on the cheap check.
-    farm = db().table("farms").select("id, farmer_name, district").eq("id", args.farm_id).execute()
+    farm = (
+        db().table("farms")
+        .select("id, farmer_name, district, crop_type, season")
+        .eq("id", args.farm_id)
+        .execute()
+    )
     if not farm.data:
         sys.exit(f"no farm {args.farm_id} (service_role sees all farms, so this is a real miss)")
-    print(f"farm: {farm.data[0]['farmer_name']} / {farm.data[0]['district']}")
 
-    print(f"querying GEE {args.start}..{args.end} over {SHEIKHUPURA_BBOX} ...")
-    # ponytail: district-wide mean, so every Sheikhupura farm gets identical
+    f = farm.data[0]
+    district, crop = f["district"], f["crop_type"]
+
+    # The district CHECK constraint and this dict have to agree. If they ever
+    # drift, fail loudly here rather than silently sampling the wrong district.
+    if district not in DISTRICTS:
+        sys.exit(f"farm district {district!r} has no bbox in app/districts.py (have: {list(DISTRICTS)})")
+
+    bbox = DISTRICTS[district]
+
+    if args.start and args.end:
+        start, end = args.start, args.end
+    else:
+        season = args.season or ("2024-25" if crop == "wheat" else "2024")
+        start, end = season_window(crop, season)
+
+    print(f"farm: {f['farmer_name']} / {district} / {crop}")
+    print(f"querying GEE {start}..{end} over {bbox} ...")
+    # ponytail: district-wide mean, so every farm in a district gets identical
     # indices. Correct for a checkpoint demo, wrong for real per-farm yield.
     # Upgrade: ee.Geometry.Point(lng, lat).buffer(500).bounds() from farms.gps_*.
-    idx = fetch_indices(bbox=SHEIKHUPURA_BBOX, start=args.start, end=args.end)
+    idx = fetch_indices(bbox=bbox, start=start, end=end)
     print(f"indices: {idx}")
 
     row = {"farm_id": args.farm_id, **idx}
