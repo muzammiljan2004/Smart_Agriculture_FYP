@@ -14,11 +14,12 @@ refreshed. That matters because the whole point of this file is the yield
 column you type in by hand; a plain overwrite would delete an afternoon of work.
 """
 import argparse
+import sys
 import csv
 from pathlib import Path
 
 from app.districts import CROPS, CROP_SEASON, DISTRICTS, INDEX_FEATURES, season_window
-from app.gee import fetch_indices
+from app.gee import fetch_indices, init
 
 CSV_PATH = Path(__file__).resolve().parents[1] / "data" / "training.csv"
 
@@ -53,6 +54,22 @@ def main():
     args = ap.parse_args()
 
     seasons = args.seasons or DEFAULT_SEASONS[args.crop]
+
+    # Authenticate ONCE, up front. The per-season handler below is for
+    # recoverable failures (a cloudy season, dates before Sentinel-2 launch).
+    # A missing credential is not recoverable, and letting it fall through
+    # would print the same auth error 15 times and write an empty CSV.
+    try:
+        init()
+    except Exception as e:
+        sys.exit(
+            f"Earth Engine is not authorised for the local Python client.\n"
+            f"  {e}\n"
+            f"Run 'earthengine authenticate' in this venv. Signing in to the GEE\n"
+            f"Code Editor does NOT cover this -- the Code Editor uses your browser\n"
+            f"session, the Python client reads ~/.config/earthengine/."
+        )
+
     rows = load_existing(CSV_PATH)
     print(f"{args.crop} ({CROP_SEASON[args.crop]}) · {len(args.districts)} districts "
           f"x {len(seasons)} seasons = {len(args.districts) * len(seasons)} rows")
