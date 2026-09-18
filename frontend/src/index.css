@@ -1,2 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+
+  --color-canvas: #f5f6f1;
+  --color-ink: #14231a;
+  --color-muted: #6c7a71;
+
+  --color-leaf-50:  #eff6f1;
+  --color-leaf-100: #d7e9dd;
+  --color-leaf-200: #b0d4bd;
+  --color-leaf-300: #7fb797;
+  --color-leaf-400: #4f9a72;
+  --color-leaf-500: #2f7d57;
+  --color-leaf-600: #236344;
+  --color-leaf-700: #1b4d35;
+  --color-leaf-800: #143a28;
+  --color-leaf-900: #0d271b;
+
+  --color-wheat-300: #ecd08a;
+  --color-wheat-400: #ddb45c;
+  --color-wheat-500: #c89a36;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+/* Tabular figures so animating numbers don't jitter as digits change width. */
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* Leaflet paints its own light chrome; tone it to match the cards. */
+.leaflet-container { background: var(--color-leaf-900); font-family: var(--font-sans); }
+.leaflet-control-attribution { font-size: 10px; opacity: .7; }

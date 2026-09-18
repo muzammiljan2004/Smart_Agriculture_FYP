@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import Auth from './Auth'
 import FarmForm from './FarmForm'
 import Dashboard from './Dashboard'
+import Logo from './Logo'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -42,28 +43,38 @@ export default function App() {
   if (!session) return <Auth />
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b">
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
-          <span className="font-semibold">Smart Agriculture</span>
-          <div className="flex items-center gap-3 text-sm">
-            <span className="text-gray-500">{session.user.email}</span>
-            <button onClick={() => supabase.auth.signOut()} className="underline text-gray-600">
+    <div className="min-h-screen">
+      <header className="sticky top-0 z-[1000] border-b border-leaf-100 bg-canvas/80 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <Logo className="h-7 w-7" />
+            <span className="font-display text-lg font-semibold tracking-tight">Smart Agriculture</span>
+          </div>
+          <div className="flex items-center gap-4 text-sm">
+            <span className="hidden text-muted sm:inline">{session.user.email}</span>
+            <button
+              onClick={() => supabase.auth.signOut()}
+              className="rounded-lg px-3 py-1.5 font-medium text-leaf-700 transition hover:bg-leaf-100"
+            >
               Sign out
             </button>
           </div>
         </div>
       </header>
 
-      <main className="p-4">
+      <main className="px-4 py-8">
         {loading ? (
-          <p className="text-center text-gray-500">Loading…</p>
+          <p className="text-center text-muted">Loading…</p>
         ) : farm ? (
           <Dashboard farm={farm} />
         ) : (
           <FarmForm onCreated={setFarm} />
         )}
       </main>
+
+      <footer className="px-4 pb-10 text-center text-xs text-muted">
+        Sentinel-2 · Google Earth Engine · Random Forest — FYP checkpoint build
+      </footer>
     </div>
   )
 }

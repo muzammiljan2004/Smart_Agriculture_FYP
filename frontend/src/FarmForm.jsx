@@ -5,6 +5,11 @@ import { supabase } from './supabase'
 // coordinates from scratch.
 const DEFAULT = { lat: '31.7131', lng: '73.9783' }
 
+const field =
+  'mt-1.5 w-full rounded-xl border border-leaf-100 bg-white px-4 py-3 text-ink ' +
+  'outline-none transition focus:border-leaf-400 focus:ring-4 focus:ring-leaf-400/15 ' +
+  'disabled:bg-leaf-50/60 disabled:text-muted'
+
 export default function FarmForm({ onCreated }) {
   const [form, setForm] = useState({ farmer_name: '', gps_lat: DEFAULT.lat, gps_lng: DEFAULT.lng })
   const [err, setErr] = useState(null)
@@ -39,56 +44,67 @@ export default function FarmForm({ onCreated }) {
   }
 
   return (
-    <form onSubmit={submit} className="max-w-md mx-auto bg-white rounded-lg shadow p-6 space-y-4">
-      <h2 className="text-lg font-semibold">Register your farm</h2>
-
-      <label className="block text-sm">
-        Farmer name
-        <input
-          required value={form.farmer_name} onChange={set('farmer_name')}
-          className="mt-1 w-full border rounded px-3 py-2"
-        />
-      </label>
-
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block text-sm">
-          Latitude
-          <input
-            type="number" step="any" required min={-90} max={90}
-            value={form.gps_lat} onChange={set('gps_lat')}
-            className="mt-1 w-full border rounded px-3 py-2"
-          />
-        </label>
-        <label className="block text-sm">
-          Longitude
-          <input
-            type="number" step="any" required min={-180} max={180}
-            value={form.gps_lng} onChange={set('gps_lng')}
-            className="mt-1 w-full border rounded px-3 py-2"
-          />
-        </label>
+    <div className="mx-auto max-w-lg">
+      <div className="mb-6 text-center">
+        <span className="inline-flex items-center gap-2 rounded-full bg-leaf-100 px-3 py-1 text-xs font-medium text-leaf-700">
+          <span className="h-1.5 w-1.5 rounded-full bg-leaf-500" />
+          Step 1 of 1
+        </span>
+        <h2 className="mt-4 font-display text-3xl font-semibold">Register your farm</h2>
+        <p className="mt-2 text-sm text-muted">
+          We use the location to pull Sentinel-2 imagery for your plot.
+        </p>
       </div>
 
-      <label className="block text-sm">
-        Crop
-        <select className="mt-1 w-full border rounded px-3 py-2" value="wheat" disabled>
-          <option value="wheat">Wheat</option>
-        </select>
-      </label>
+      <form onSubmit={submit} className="rounded-2xl bg-white p-7 shadow-sm ring-1 ring-leaf-100">
+        <label className="block text-sm font-medium">
+          Farmer name
+          <input required value={form.farmer_name} onChange={set('farmer_name')}
+                 placeholder="e.g. Muhammad Aslam" className={field} />
+        </label>
 
-      <label className="block text-sm">
-        District
-        <input value="Sheikhupura" disabled className="mt-1 w-full border rounded px-3 py-2 bg-gray-100" />
-      </label>
+        <div className="mt-5 grid grid-cols-2 gap-4">
+          <label className="block text-sm font-medium">
+            Latitude
+            <input type="number" step="any" required min={-90} max={90}
+                   value={form.gps_lat} onChange={set('gps_lat')} className={`${field} tnum`} />
+          </label>
+          <label className="block text-sm font-medium">
+            Longitude
+            <input type="number" step="any" required min={-180} max={180}
+                   value={form.gps_lng} onChange={set('gps_lng')} className={`${field} tnum`} />
+          </label>
+        </div>
+        <p className="mt-2 text-xs text-muted">Prefilled with Sheikhupura centre — adjust to your plot.</p>
 
-      {err && <p className="text-sm text-red-600">{err}</p>}
+        <div className="mt-5 grid grid-cols-2 gap-4">
+          <label className="block text-sm font-medium">
+            Crop
+            <select value="wheat" disabled className={field}>
+              <option value="wheat">Wheat</option>
+            </select>
+          </label>
+          <label className="block text-sm font-medium">
+            District
+            <input value="Sheikhupura" disabled className={field} />
+          </label>
+        </div>
+        <p className="mt-2 text-xs text-muted">
+          Locked for this release — one district, one crop.
+        </p>
 
-      <button
-        type="submit" disabled={busy}
-        className="w-full bg-green-700 text-white rounded py-2 disabled:opacity-50"
-      >
-        {busy ? 'Saving...' : 'Register farm'}
-      </button>
-    </form>
+        {err && (
+          <p role="alert" className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 ring-1 ring-red-100">
+            {err}
+          </p>
+        )}
+
+        <button type="submit" disabled={busy}
+                className="mt-7 w-full rounded-xl bg-leaf-700 py-3 font-medium text-white shadow-sm
+                           transition hover:bg-leaf-800 active:scale-[.99] disabled:opacity-60">
+          {busy ? 'Saving…' : 'Register farm'}
+        </button>
+      </form>
+    </div>
   )
 }

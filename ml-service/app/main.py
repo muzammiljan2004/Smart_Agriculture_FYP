@@ -49,6 +49,10 @@ class Prediction(BaseModel):
     confidence_interval: list[float]
     unit: str = "t/ha"
     model_used: str = MODEL_NAME
+    # Populated only by /farms/{id}/predict -- the dashboard shows the actual
+    # Sentinel-2 values behind the number instead of asking you to trust it.
+    features: dict | None = None
+    feature_date: str | None = None
 
 
 def predict(f: Features) -> Prediction:
@@ -118,6 +122,8 @@ def predict_for_farm(farm_id: str):
         raise HTTPException(422, f"incomplete indices for {row['date']}: {row}")
 
     result = predict(Features(crop_type=farm.data[0]["crop_type"], **{k: row[k] for k in FEATURES}))
+    result.features = {k: row[k] for k in FEATURES}
+    result.feature_date = row["date"]
 
     lo, hi = result.confidence_interval
     db().table("predictions").insert({
