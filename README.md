@@ -76,6 +76,17 @@ npm run dev                                       # http://localhost:5173
 Run both at once — two terminals. The frontend expects ml-service on
 `VITE_ML_API_URL`.
 
+## Tests
+
+```bash
+cd ml-service
+python tests/test_ownership.py   # 403 on another farmer's farm
+python tests/test_pipeline.py    # growth, alerts, PDF, multi-farm
+```
+
+Both hit the LIVE Supabase project: they create throwaway accounts and farms
+and delete them in a `finally` block. Nothing persists.
+
 ## Status
 
 - [x] 1. Project structure
@@ -83,3 +94,10 @@ Run both at once — two terminals. The frontend expects ml-service on
 - [x] 3. FastAPI `/predict` + synthetic-trained Random Forest
 - [x] 4. GEE Sentinel-2 script + `GET /farms/{id}/predict`
 - [x] 5. React auth, farm form, dashboard
+- [x] 6. JWT ownership check on /farms/{id}/predict (403)
+- [x] 7. Multi-farm switcher
+- [x] 8. District + crop dropdowns, honesty caveats, "model: preliminary"
+- [x] 9. Confidence interval, district comparison, YoY trend
+- [x] 10. Growth-stage tracker
+- [x] 11. Drought + low-yield alerts, Gmail SMTP, alerts table
+- [x] 12. One-page PDF report

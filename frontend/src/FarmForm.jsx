@@ -27,6 +27,7 @@ export default function FarmForm({ onCreated }) {
     crop_type: 'wheat',
     gps_lat: DISTRICTS.Sheikhupura.lat,
     gps_lng: DISTRICTS.Sheikhupura.lng,
+    planting_date: '',
   })
   const [err, setErr] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -56,6 +57,10 @@ export default function FarmForm({ onCreated }) {
         district: form.district,
         crop_type: form.crop_type,
         season: SEASON[form.crop_type],
+        // '' would violate the date column. null is meaningful: the growth
+        // tracker falls back to the season's conventional sowing date and
+        // labels the result as estimated rather than pretending it was given.
+        planting_date: form.planting_date || null,
       })
       .select()
       .single()
@@ -134,6 +139,22 @@ export default function FarmForm({ onCreated }) {
         </div>
         <p className="mt-2 text-xs text-muted">
           Prefilled with {form.district} town centre — adjust to your plot.
+        </p>
+
+        <label className="mt-5 block text-sm font-medium">
+          Sowing date <span className="font-normal text-muted">(optional)</span>
+          {/* Native date input rather than a picker library: it is already
+              localised, keyboard accessible, and validated by the browser. */}
+          <input
+            type="date"
+            value={form.planting_date}
+            onChange={set('planting_date')}
+            className={field}
+          />
+        </label>
+        <p className="mt-2 text-xs text-muted">
+          Drives the growth-stage tracker. Left blank, we assume the usual{' '}
+          {form.crop_type === 'wheat' ? '15 November' : '25 June'} sowing and mark it estimated.
         </p>
 
         {err && (

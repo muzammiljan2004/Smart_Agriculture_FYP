@@ -4,3 +4,5 @@ dist/
 __pycache__/
 .venv/
 *.pkl
+tests/report-from-api.pdf
+*.pdf
