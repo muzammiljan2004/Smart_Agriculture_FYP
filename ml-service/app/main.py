@@ -189,7 +189,10 @@ def assess(district: str, crop_type: str, yield_rows: list) -> tuple[str, list[s
     # 1. The model itself. train.py records where its rows came from.
     # ASCII punctuation only: these strings are rendered into a PDF by
     # fpdf2's core fonts, which are latin-1 and raise on an em dash.
-    synthetic = _bundle["source"] != "csv:training.csv"
+    # Anything not explicitly synthetic counts as real. Matching on the
+    # positive case rather than "!= one known filename" means a new training
+    # source (real:training_data_real.csv) is recognised without editing this.
+    synthetic = str(_bundle.get("source", "")).startswith("synthetic")
     if synthetic:
         caveats.append(
             "Model trained on synthetic data - every prediction here is illustrative, not validated."
@@ -254,6 +257,9 @@ def health():
         "trained_crops": _bundle["trained_crops"] if _bundle else [],
         "training_source": _bundle["source"] if _bundle else None,
         "training_rows": _bundle["n_rows"] if _bundle else 0,
+        # Present once trained on real data; lets you confirm a model swap took
+        # effect without unpickling anything.
+        "metrics": _bundle.get("metrics") if _bundle else None,
     }
 
 

@@ -1,0 +1,11 @@
+district,season,ndvi,evi,ndwi,savi,nbr,actual_yield,yield_confidence
+Attock,2017-18,0.3058,0.192,0.0003,0.1912,0.0988,1.474,Verified: directly reported (CRS final estimate)
+Attock,2018-19,0.3469,0.2022,0.0241,0.2036,0.1467,1.895,Verified: directly reported (CRS final estimate)
+Attock,2020-21,0.3483,0.2098,0.0148,0.2068,0.13,1.767,Verified: directly reported (CRS prior-year column of the following season report); printed area total corrected from printed components (see notes)
+Attock,2021-22,0.3205,0.1887,-0.0031,0.1913,0.1088,1.697,Verified: directly reported (CRS final estimate)
+Attock,2022-23,0.3479,0.2158,0.0177,0.2128,0.1353,1.831,Verified: directly reported (CRS final estimate)
+Sheikhupura,2017-18,0.4427,0.2633,0.138,0.2532,0.2752,3.2384,Calculated: merged Nankana Sahib + Sheikhupura to GAUL-2015 Sheikhupura
+Sheikhupura,2018-19,0.4885,0.3217,0.2043,0.2975,0.3735,3.0797,Calculated: merged Nankana Sahib + Sheikhupura to GAUL-2015 Sheikhupura
+Sheikhupura,2020-21,0.5719,0.4144,0.2538,0.3661,0.4386,3.4526,Calculated: merged Nankana Sahib + Sheikhupura to GAUL-2015 Sheikhupura
+Sheikhupura,2021-22,0.5881,0.4176,0.2698,0.3774,0.4533,3.165,Calculated: merged Nankana Sahib + Sheikhupura to GAUL-2015 Sheikhupura
+Sheikhupura,2022-23,0.6017,0.4062,0.2498,0.3716,0.4298,3.3945,Calculated: merged Nankana Sahib + Sheikhupura to GAUL-2015 Sheikhupura
