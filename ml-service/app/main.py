@@ -159,6 +159,48 @@ def predict(f: Features) -> Prediction:
     )
 
 
+def borrow_district_features(farm_row) -> dict | None:
+    """Copy a same-district farm's latest indices onto this farm.
+
+    Legitimate only because indices are currently DISTRICT-level: fetch_indices
+    samples the district bounding box, not the farm, so every farm in a
+    district gets byte-identical values. Re-querying GEE per farm would spend
+    ~30s to recompute a number we already hold.
+
+    ponytail: DELETE THIS the moment per-farm geometry lands (the 500 m buffer
+    around farms.gps_*). At that point two farms in one district legitimately
+    differ, and copying would silently hand one farm another's readings --
+    which is far worse than the 404 this replaces.
+    """
+    peers = (
+        db().table("farms").select("id")
+        .eq("district", farm_row["district"])
+        .neq("id", farm_row["id"])
+        .execute()
+    )
+    ids = [p["id"] for p in (peers.data or [])]
+    if not ids:
+        return None
+
+    src = (
+        db().table("satellite_features")
+        .select("date, " + ", ".join(INDEX_FEATURES))
+        .in_("farm_id", ids)
+        .order("date", desc=True)
+        .limit(1)
+        .execute()
+    )
+    if not src.data:
+        return None
+
+    row = {"farm_id": farm_row["id"], "date": src.data[0]["date"],
+           **{k: src.data[0][k] for k in INDEX_FEATURES}}
+    db().table("satellite_features").upsert(row, on_conflict="farm_id,date").execute()
+    print(f"[features] farm {farm_row['id'][:8]} reused {farm_row['district']} "
+          f"indices dated {row['date']}")
+    return row
+
+
 def district_yield_rows(district: str, crop_type: str):
     """Ground-truth yields for a district+crop, oldest season first.
 
@@ -287,14 +329,14 @@ def predict_for_farm(farm_id: str, user_id: str = Depends(current_user_id)):
         .limit(1)
         .execute()
     )
-    if not feats.data:
+    row = feats.data[0] if feats.data else borrow_district_features(farm_row)
+    if not row:
         raise HTTPException(
             404,
-            f"no satellite_features for farm {farm_id}. Run: "
+            f"No imagery for {farm_row['district']} yet, and no other farm in that "
+            f"district has any to reuse. Run: "
             f"python -m scripts.fetch_satellite_data {farm_id}",
         )
-
-    row = feats.data[0]
     if any(row[k] is None for k in INDEX_FEATURES):
         raise HTTPException(422, f"incomplete indices for {row['date']}: {row}")
 

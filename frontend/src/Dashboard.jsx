@@ -205,7 +205,18 @@ export default function Dashboard({ farm }) {
         return body
       })
       .then((d) => alive && setPred(d))
-      .catch((e) => alive && setErr(e.message))
+      .catch((e) => {
+        if (!alive) return
+        // "Failed to fetch" is the browser's blanket TypeError for a
+        // network-level failure (connection refused, CORS, mixed content).
+        // It carries no status code and tells the user nothing, so name the
+        // most likely cause and the address that was actually tried.
+        setErr(
+          e.message === 'Failed to fetch'
+            ? `Cannot reach the prediction service at ${API}. Is it running? (cd ml-service && uvicorn app.main:app --reload)`
+            : e.message
+        )
+      })
 
     return () => { alive = false }   // stale response must not overwrite newer state
   }, [farm.id])
@@ -430,14 +441,25 @@ export default function Dashboard({ farm }) {
           <p className="mt-1 text-xs text-muted">Sentinel-2, cloud-masked median composite</p>
 
           <div className="mt-5 space-y-4">
-            {pred?.features
-              ? Object.keys(INDEX_META).map((k) => <IndexBar key={k} name={k} value={pred.features[k]} />)
-              : Object.keys(INDEX_META).map((k) => (
-                  <div key={k} className="animate-pulse space-y-1.5">
-                    <div className="h-3 w-16 rounded bg-leaf-100" />
-                    <div className="h-1.5 w-full rounded-full bg-leaf-100" />
-                  </div>
-                ))}
+            {pred?.features ? (
+              Object.keys(INDEX_META).map((k) => (
+                <IndexBar key={k} name={k} value={pred.features[k]} />
+              ))
+            ) : err ? (
+              // Without this branch the skeletons pulse forever on a failed
+              // request, which reads as "still loading" when it has already
+              // given up. An error state must look different from a wait.
+              <p className="text-sm text-muted">
+                Unavailable — the prediction request failed, so there are no indices to show.
+              </p>
+            ) : (
+              Object.keys(INDEX_META).map((k) => (
+                <div key={k} className="animate-pulse space-y-1.5">
+                  <div className="h-3 w-16 rounded bg-leaf-100" />
+                  <div className="h-1.5 w-full rounded-full bg-leaf-100" />
+                </div>
+              ))
+            )}
           </div>
         </div>
 
