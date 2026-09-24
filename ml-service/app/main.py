@@ -24,7 +24,14 @@ async def lifespan(app: FastAPI):
     200-tree forest on every call would dominate the response time."""
     global _bundle
     if not MODEL_PATH.exists():
-        raise RuntimeError(f"{MODEL_PATH} missing. Run: python -m app.train")
+        # model.pkl is deliberately NOT committed: it is 30s of CPU away from
+        # data/training_data_real.csv, which IS committed. Point at the real
+        # trainer when that data exists, and only fall back to the synthetic
+        # one when it does not.
+        real_csv = MODEL_PATH.resolve().parents[1] / "data" / "training_data_real.csv"
+        how = ("python -m scripts.train_real" if real_csv.exists()
+               else "python -m app.train   (synthetic; no real dataset found)")
+        raise RuntimeError(f"{MODEL_PATH} missing. Run: {how}")
     _bundle = joblib.load(MODEL_PATH)
     missing = [c for c in CROPS if c not in _bundle["trained_crops"]]
     if missing:

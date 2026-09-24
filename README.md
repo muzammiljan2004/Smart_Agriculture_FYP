@@ -34,7 +34,9 @@ cd ml-service
 py -m venv .venv && .venv\Scripts\activate    # macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env                              # fill in the values
-python -m app.train                               # builds app/model.pkl (~2s)
+python -m scripts.train_real                      # builds app/model.pkl from the
+                                                  # committed real dataset (~30s,
+                                                  # no GEE credentials needed)
 uvicorn app.main:app --reload                     # http://localhost:8000/docs
 ```
 
@@ -75,6 +77,12 @@ npm run dev                                       # http://localhost:5173
 
 Run both at once — two terminals. The frontend expects ml-service on
 `VITE_ML_API_URL`.
+
+The trained model is NOT committed. `data/training_data_real.csv` (170 rows,
+90 minutes of Earth Engine) is, and the model is 30 seconds of CPU away from
+it with a fixed `random_state`, so every teammate builds an identical one.
+Committing the pickle would add ~4.7 MB of undeltifiable binary to git history
+per retrain.
 
 ## Tests
 
