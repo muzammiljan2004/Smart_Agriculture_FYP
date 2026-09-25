@@ -31,7 +31,17 @@ two folders without touching each other's files.
 
 ```bash
 cd ml-service
-py -m venv .venv && .venv\Scripts\activate    # macOS/Linux: source .venv/bin/activate
+
+# Windows
+py -m venv .venv
+.venv\Scripts\activate
+
+# macOS / Linux
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+```bash
 pip install -r requirements.txt
 cp .env.example .env                              # fill in the values
 python -m scripts.train_real                      # builds app/model.pkl from the

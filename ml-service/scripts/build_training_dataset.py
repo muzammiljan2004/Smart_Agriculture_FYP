@@ -22,20 +22,46 @@ import sys
 import time
 from pathlib import Path
 
+from app.districts import CROPS, season_window
 from app.gee import DistrictNotFound, NoImagery, fetch_indices, get_district_geometry
 
 DATA = Path(__file__).resolve().parents[1] / "data"
-YIELD_CSV = DATA / "Wheat_Yield_Data.csv"
+# One input file per crop. Rice is filtered to Rice Category == "Total Rice"
+# (see load_yield_rows): Basmati and Non-Basmati are subcomponents of the
+# same district-season, so including them would triple-count each
+# observation and smuggle in a variety dimension the model cannot use.
+# Every crop now reads from ONE normalised file rather than a file per crop.
+# Built by scripts.pbs_all_crops_to_csv from the PBS all-Pakistan workbook,
+# which was cross-checked against the CRS wheat series: 391 of 393 overlapping
+# district-seasons matched to within 5 kg/ha, so the two sources corroborate.
+#
+# Only crops that ALSO have an observation window in data/crops.csv can be
+# fetched -- a yield with no window has no imagery to join to. The registry is
+# the gate, so adding a crop here means adding it there first.
+PBS_ALL = "PBS_all_crops.csv"
+PBS_COLS = ("Yield", "Area (ha)", "Production (tonnes)")
+
+CROP_FILES = {
+    c: (PBS_ALL, *PBS_COLS)
+    for c in ("wheat", "rice", "maize", "sugarcane", "cotton", "barley",
+              "bajra", "jowar", "potato", "onion", "tomato")
+}
 NAME_MAP_CSV = DATA / "District_Name_Map.csv"
 OUT_CSV = DATA / "training_data_real.csv"
 
+# crop_type is part of the row identity now, not just a label: the resume
+# check and the model feature both key on it.
 FIELDNAMES = [
-    "district", "season", "ndvi", "evi", "ndwi", "savi", "nbr",
+    "district", "season", "crop_type", "ndvi", "evi", "ndwi", "savi", "nbr",
     "actual_yield", "yield_confidence",
 ]
 
 # Seasons with no source yield data at all. Never fetched, never expected.
-EXCLUDED_SEASONS = {"2019-20", "2023-24"}
+# Seasons with no source yield data at all. Emptied once the PBS all-crops
+# workbook arrived: it covers 2017-18 through 2024-25 continuously, including
+# the two seasons the older CRS spreadsheet was missing. Kept as a hook rather
+# than deleted, because a future crop may genuinely have gaps.
+EXCLUDED_SEASONS = set()
 
 # Districts created after the FAO/GAUL/2015 vintage, mapped to the GAUL-era
 # district whose polygon still contains them.
@@ -93,10 +119,9 @@ DISTRICT_SCALE = 100
 FALLBACK_SCALES = [250, 500]
 
 
-def season_window(season: str) -> tuple[str, str]:
-    """Rabi window for a 'YYYY-YY' season label: 1 Dec -> 15 Mar."""
-    start_year = int(season.split("-")[0])
-    return f"{start_year}-12-01", f"{start_year + 1}-03-15"
+# season_window now comes from app.districts -- see the import above. The local
+# rabi-only copy that used to live here shadowed it, which is why rice windows
+# were defined but never reachable from this script.
 
 
 def load_name_map() -> dict:
@@ -136,11 +161,61 @@ def load_name_map() -> dict:
     return mapping
 
 
-def load_yield_rows() -> list:
-    if not YIELD_CSV.exists():
-        sys.exit(f"missing {YIELD_CSV}")
-    with YIELD_CSV.open(newline="", encoding="utf-8-sig") as fh:
-        return list(csv.DictReader(fh))
+def load_yield_rows(crop: str) -> list:
+    """Source yield rows for one crop, already filtered to one row per
+    district-season."""
+    filename = CROP_FILES[crop][0]
+    path = DATA / filename
+    if not path.exists():
+        sys.exit(f"missing {path}. Run: python -m scripts.pbs_all_crops_to_csv")
+
+    with path.open(newline="", encoding="utf-8-sig") as fh:
+        rows = list(csv.DictReader(fh))
+
+    # The normalised file holds every crop in one table, so select this one.
+    if rows and "Crop" in rows[0]:
+        rows = [r for r in rows if (r.get("Crop") or "").strip().lower() == crop]
+        if not rows:
+            sys.exit(f"{filename} has no rows for {crop!r}")
+
+    if crop == "rice" and rows and any("category" in c.lower() for c in rows[0]):
+        # "Total Rice" only. Basmati and Non-Basmati are subcomponents of the
+        # SAME district-season, so keeping all three would enter each
+        # observation three times with three different yields -- inflating the
+        # row count while contradicting itself, and adding a variety dimension
+        # the feature vector has no column for.
+        cat_col = next((c for c in (rows[0] if rows else {}) if "category" in c.lower()), None)
+        if not cat_col:
+            sys.exit(f"{filename} has no 'Rice Category' column; refusing to guess "
+                     f"which rows are totals")
+        before = len(rows)
+        rows = [r for r in rows if (r.get(cat_col) or "").strip().lower() == "total rice"]
+        print(f"  {filename}: {before} row(s) -> {len(rows)} 'Total Rice' row(s)")
+
+    return rows
+
+
+def yield_to_t_per_ha(value: str, unit: str | None, crop: str) -> float:
+    """Normalise a reported yield to t/ha.
+
+    The rice file carries an explicit 'Yield Unit' column, so the unit is read
+    rather than assumed. Assuming kg/ha for a file reporting maunds/acre would
+    be a silent 40x error that looks like a plausible number.
+    """
+    v = float(value)
+    u = (unit or "").strip().lower().replace(" ", "")
+
+    if not u:
+        # Wheat file has no unit column; its header states kg/ha.
+        return v * KG_PER_HA_TO_T_PER_HA
+    if "kg" in u and ("ha" in u or "hect" in u):
+        return v * KG_PER_HA_TO_T_PER_HA
+    if ("tonne" in u or u.startswith("t/")) and ("ha" in u or "hect" in u):
+        return v
+    raise ValueError(
+        f"unrecognised yield unit {unit!r} for {crop}. Add a conversion in "
+        f"yield_to_t_per_ha() rather than letting it through unconverted."
+    )
 
 
 def load_done() -> set:
@@ -148,7 +223,9 @@ def load_done() -> set:
     if not OUT_CSV.exists():
         return set()
     with OUT_CSV.open(newline="", encoding="utf-8-sig") as fh:
-        return {(r["district"], r["season"]) for r in csv.DictReader(fh)}
+        # Rows written before crop_type existed are wheat by definition.
+        return {(r["district"], r["season"], r.get("crop_type") or "wheat")
+                for r in csv.DictReader(fh)}
 
 
 def _is_memory_error(e) -> bool:
@@ -187,16 +264,51 @@ def fetch_with_backoff(geometry, start, end):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
+    # Choices come from CROP_FILES, not CROPS: CROPS is the model's feature
+    # vector (what it can predict), while CROP_FILES is what has both yield
+    # data and an observation window (what can be fetched). Fetching has to
+    # come first -- a crop cannot enter the model until its rows exist.
+    ap.add_argument("--crop", choices=sorted(CROP_FILES), default="wheat")
+    ap.add_argument("--all-crops", action="store_true",
+                    help="fetch every crop in CROP_FILES, in turn")
     ap.add_argument("--dry-run", action="store_true", help="plan only, no GEE calls")
     ap.add_argument("--limit", type=int, help="stop after N fetches (smoke test)")
     ap.add_argument("--only", nargs="+", metavar="DISTRICT",
                     help="restrict to these GAUL-era districts (spot checks)")
     args = ap.parse_args()
 
+    # --all-crops runs the whole body once per crop. A loop rather than a
+    # rewrite, because every crop takes the identical path: the only thing
+    # that changes is which observation window season_window() returns.
+    #
+    # Order matters for a run that may be interrupted. Crops are fetched
+    # least-rows-first so the greatest number of CROPS is represented
+    # earliest -- a half-finished run then still trains a multi-crop model,
+    # rather than one crop fetched perfectly and ten not started.
+    if args.all_crops:
+        order = sorted(CROP_FILES, key=lambda c: len(load_yield_rows(c)))
+        print(f"all-crops run, {len(order)} crops, least data first:")
+        print("  " + ", ".join(order))
+        bar = "=" * 62
+        for n, c in enumerate(order, 1):
+            print("")
+            print(bar)
+            print(f"[{n}/{len(order)}] {c}")
+            print(bar)
+            args.crop = c
+            args.all_crops = False
+            run_one(args)
+        return
+    run_one(args)
+
+
+def run_one(args):
+    crop = args.crop
+    _, yield_col, area_col, prod_col = CROP_FILES[crop]
     name_map = load_name_map()
-    rows = load_yield_rows()
+    rows = load_yield_rows(crop)
     done = load_done()
-    print(f"yield rows: {len(rows)}   already built: {len(done)}")
+    print(f"crop: {crop}   yield rows: {len(rows)}   already built: {len(done)}")
 
     def norm(s):
         return "".join(ch for ch in str(s).lower() if ch.isalnum())
@@ -208,7 +320,8 @@ def main():
     for r in rows:
         season = (r.get("Season") or "").strip()
         raw_district = (r.get("District") or "").strip()
-        yield_kg = (r.get("Wheat Yield (kg/ha)") or "").strip()
+        yield_raw = (r.get(yield_col) or "").strip()
+        unit = r.get("Yield Unit")
 
         if season in EXCLUDED_SEASONS:
             skips["excluded_season"] += 1
@@ -228,7 +341,7 @@ def main():
             print(f"  SKIP unmapped district {raw_district!r} ({season})")
             continue
 
-        if not yield_kg:
+        if not yield_raw:
             # Legitimately missing combinations. Never estimated or filled.
             skips["no_yield"] += 1
             continue
@@ -238,11 +351,11 @@ def main():
                               {"members": [], "area": 0.0, "production": 0.0,
                                "yields": [], "statuses": []})
         g["members"].append(std)
-        g["yields"].append(float(yield_kg))
+        g["yields"].append(yield_to_t_per_ha(yield_raw, unit, crop))
         g["statuses"].append((r.get("Verification Status") or "").strip())
         try:
-            g["area"] += float(r.get("Wheat Area (ha)") or 0)
-            g["production"] += float(r.get("Wheat Production (tonnes)") or 0)
+            g["area"] += float(r.get(area_col) or 0)
+            g["production"] += float(r.get(prod_col) or 0)
         except ValueError:
             g["area"] = g["production"] = 0.0   # forces the fallback below
 
@@ -253,30 +366,32 @@ def main():
         if len(g["members"]) == 1:
             # Untouched district: keep the source's own figure rather than a
             # recomputed one, so "directly reported" stays literally true.
-            yield_kg = g["yields"][0]
+            yield_t = g["yields"][0]
             confidence = g["statuses"][0]
         elif g["area"] > 0:
             # Merged: production-weighted, which is what summing area and
             # production gives. A plain mean of the two yields would be wrong
             # whenever the districts differ in size, which they always do.
-            yield_kg = g["production"] * 1000 / g["area"]
+            # production (t) / area (ha) is ALREADY t/ha -- no x1000 here,
+            # unlike the kg/ha figure the sources print.
+            yield_t = g["production"] / g["area"]
             confidence = (f"Calculated: merged {' + '.join(sorted(g['members']))} "
                           f"to GAUL-2015 {district}")
             merged_count += 1
             print(f"  MERGE {district:16s} {season}  <- {', '.join(sorted(g['members']))}"
-                  f"  yield {yield_kg:.0f} kg/ha")
+                  f"  yield {yield_t:.3f} t/ha")
         else:
             skips["no_yield"] += len(g["members"])
             print(f"  SKIP  {district:16s} {season}  merge needs area/production, none usable")
             continue
 
-        if (district, season) in done:
+        if (district, season, crop) in done:
             skips["already_done"] += 1
             continue
 
         plan.append({
-            "district": district, "season": season,
-            "actual_yield": round(yield_kg * KG_PER_HA_TO_T_PER_HA, 4),
+            "district": district, "season": season, "crop_type": crop,
+            "actual_yield": round(yield_t, 4),
             "yield_confidence": confidence,
         })
 
@@ -320,7 +435,7 @@ def main():
                 break
             try:
                 geom = get_district_geometry(item["district"])
-                idx, used_scale = fetch_with_backoff(geom, *season_window(item["season"]))
+                idx, used_scale = fetch_with_backoff(geom, *season_window(crop, item["season"]))
                 if used_scale != DISTRICT_SCALE:
                     coarsened.append((item["district"], item["season"], used_scale))
             except DistrictNotFound as e:
@@ -328,8 +443,13 @@ def main():
                 print(f"  SKIP {item['district']:18s} {item['season']}  {e}")
                 continue
             except NoImagery:
+                # Kharif overlaps the monsoon, so this is expected to be
+                # commoner for rice than wheat: a physical limit of optical
+                # imagery, not a defect. Counted separately from failures
+                # so the two can never be confused in the summary.
                 no_imagery += 1
-                print(f"  SKIP {item['district']:18s} {item['season']}  no imagery")
+                print(f"  SKIP {item['district']:18s} {item['season']}  "
+                      f"no cloud-free imagery in window")
                 continue
             except Exception as e:
                 failed += 1
@@ -338,6 +458,7 @@ def main():
 
             writer.writerow({
                 "district": item["district"], "season": item["season"],
+                "crop_type": crop,
                 "ndvi": idx["ndvi"], "evi": idx["evi"], "ndwi": idx["ndwi"],
                 "savi": idx["savi"], "nbr": idx["nbr"],
                 "actual_yield": item["actual_yield"],
@@ -358,9 +479,12 @@ def main():
         for d, s, sc in coarsened:
             print(f"  {d} {s} at {sc} m")
     print(f"\nwrote {ok} row(s) -> {OUT_CSV}")
-    print(f"skip rate this run: {rate:.1f}% ({no_imagery} no-imagery, {failed} failed)")
+    print(f"skip rate this run: {rate:.1f}%")
+    print(f"  cloud / no imagery : {no_imagery:3d}   (physical limit, worse in kharif)")
+    print(f"  hard failures      : {failed:3d}   (name resolution, GEE errors)")
     if rate > 15:
-        print("Skip rate above 15% -- check before training on this.")
+        print(f"\nSkip rate above 15%. For {crop} in the monsoon-overlapping kharif "
+              f"window a high cloud count is expected; a high FAILURE count is not.")
 
 
 if __name__ == "__main__":

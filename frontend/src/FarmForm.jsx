@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 
 // Must match DISTRICTS in ml-service/app/districts.py and the CHECK constraint
@@ -13,7 +13,42 @@ export const DISTRICTS = {
 
 // Season is derived, not chosen: the DB has a CHECK that rejects any other
 // pairing, so offering it as a separate input could only produce errors.
-const SEASON = { wheat: 'rabi', rice: 'kharif' }
+//
+// REGENERATE when ml-service/data/crops.csv changes:
+//   python -c "from app.crops import ALL_CROPS, CROP_SEASON; //     [print(f\"  {c}: '{CROP_SEASON[c]}',\") for c in ALL_CROPS]"
+// Ordered by how much of Punjab actually grows them, not alphabetically.
+export const SEASON = {
+  wheat: 'rabi',
+  rice: 'kharif',
+  maize: 'kharif',
+  sugarcane: 'annual',
+  cotton: 'kharif',
+  potato: 'rabi',
+  onion: 'rabi',
+  garlic: 'rabi',
+  tomato: 'kharif',
+  brinjal: 'zaid',
+  chilli: 'zaid',
+  barley: 'rabi',
+  bajra: 'kharif',
+  jowar: 'kharif',
+}
+
+const WATER_SOURCES = [
+  ['canal_and_tubewell', 'Canal + tubewell'],
+  ['canal', 'Canal only'],
+  ['tubewell', 'Tubewell only'],
+  ['rainfed', 'Rain-fed (barani)'],
+]
+
+const SALINITY = [
+  ['none', 'No salinity problem'],
+  ['mild', 'Mild — some patches'],
+  ['severe', 'Severe — visible salt crust'],
+  ['unknown', "Don't know"],
+]
+
+const title = (c) => c.charAt(0).toUpperCase() + c.slice(1)
 
 const field =
   'mt-1.5 w-full rounded-xl border border-leaf-100 bg-white px-4 py-3 text-ink ' +
@@ -28,9 +63,23 @@ export default function FarmForm({ onCreated }) {
     gps_lat: DISTRICTS.Sheikhupura.lat,
     gps_lng: DISTRICTS.Sheikhupura.lng,
     planting_date: '',
+    water_source: 'canal_and_tubewell',
+    salinity_flag: 'none',
+    last_crop: '',
   })
   const [err, setErr] = useState(null)
   const [busy, setBusy] = useState(false)
+  // Which crops the model can actually predict. Read from the service rather
+  // than hardcoded, so the warning below stays true after every retrain
+  // instead of quietly going stale.
+  const [trained, setTrained] = useState(null)
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_ML_API_URL}/health`)
+      .then((r) => r.json())
+      .then((h) => setTrained(h.trained_crops ?? []))
+      .catch(() => setTrained([]))
+  }, [])
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
 
@@ -61,6 +110,10 @@ export default function FarmForm({ onCreated }) {
         // tracker falls back to the season's conventional sowing date and
         // labels the result as estimated rather than pretending it was given.
         planting_date: form.planting_date || null,
+        // The three things the farmer knows and no satellite does.
+        water_source: form.water_source,
+        salinity_flag: form.salinity_flag,
+        last_crop: form.last_crop || null,
       })
       .select()
       .single()
@@ -79,7 +132,8 @@ export default function FarmForm({ onCreated }) {
         </span>
         <h2 className="mt-4 font-display text-3xl font-semibold">Register your farm</h2>
         <p className="mt-2 text-sm text-muted">
-          We use the location to pull Sentinel-2 imagery for your plot.
+          We use the location to read your soil and climate, and to pull Sentinel-2
+          imagery for your plot.
         </p>
       </div>
 
@@ -107,17 +161,22 @@ export default function FarmForm({ onCreated }) {
           <label className="block text-sm font-medium">
             Crop
             <select value={form.crop_type} onChange={set('crop_type')} className={field}>
-              <option value="wheat">Wheat (rabi)</option>
-              <option value="rice">Rice (kharif)</option>
+              {Object.entries(SEASON).map(([c, s]) => (
+                <option key={c} value={c}>{title(c)} ({s})</option>
+              ))}
             </select>
           </label>
         </div>
 
-        {form.crop_type === 'rice' && (
+        {trained && !trained.includes(form.crop_type) && (
           <p className="mt-3 rounded-xl bg-wheat-300/25 px-4 py-3 text-xs leading-relaxed text-wheat-500 ring-1 ring-wheat-300/50">
-            <strong className="font-semibold">Rice has no training data yet.</strong> The farm
-            saves fine and imagery will be pulled for the kharif window, but the model will
-            refuse to predict until rice seasons and PBS rice yields are added.
+            <strong className="font-semibold">
+              No yield model for {title(form.crop_type)} yet.
+            </strong>{' '}
+            The farm saves fine, and land suitability, growth stages and weather alerts all
+            work. Yield prediction will refuse until {title(form.crop_type)} seasons are added
+            to the training set — the model currently covers{' '}
+            {trained.length ? trained.join(' and ') : 'nothing yet'}.
           </p>
         )}
 
@@ -141,6 +200,45 @@ export default function FarmForm({ onCreated }) {
           Prefilled with {form.district} town centre — adjust to your plot.
         </p>
 
+        {/* The three things a farmer knows and no raster does. Salinity in
+            particular has no free global layer, and in southern Punjab it is
+            often what decides whether a crop is growable at all. */}
+        <div className="mt-6 rounded-xl bg-leaf-50/60 p-5 ring-1 ring-leaf-100">
+          <p className="text-sm font-medium">About your land</p>
+          <p className="mt-1 text-xs text-muted">
+            Satellites can read your soil and climate. These three they cannot.
+          </p>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm font-medium">
+              Water source
+              <select value={form.water_source} onChange={set('water_source')} className={field}>
+                {WATER_SOURCES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </label>
+            <label className="block text-sm font-medium">
+              Salinity
+              <select value={form.salinity_flag} onChange={set('salinity_flag')} className={field}>
+                {SALINITY.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </label>
+          </div>
+
+          <label className="mt-4 block text-sm font-medium">
+            Last crop grown <span className="font-normal text-muted">(optional)</span>
+            <select value={form.last_crop} onChange={set('last_crop')} className={field}>
+              <option value="">Not sure / first season</option>
+              {Object.keys(SEASON).map((c) => (
+                <option key={c} value={c}>{title(c)}</option>
+              ))}
+            </select>
+          </label>
+          <p className="mt-2 text-xs text-muted">
+            Used to check rotation — planting tomato after potato carries the same
+            soil diseases, for example.
+          </p>
+        </div>
+
         <label className="mt-5 block text-sm font-medium">
           Sowing date <span className="font-normal text-muted">(optional)</span>
           {/* Native date input rather than a picker library: it is already
@@ -153,8 +251,8 @@ export default function FarmForm({ onCreated }) {
           />
         </label>
         <p className="mt-2 text-xs text-muted">
-          Drives the growth-stage tracker. Left blank, we assume the usual{' '}
-          {form.crop_type === 'wheat' ? '15 November' : '25 June'} sowing and mark it estimated.
+          Drives the growth-stage tracker. Left blank, we assume this crop's usual
+          sowing date and mark it estimated.
         </p>
 
         {err && (

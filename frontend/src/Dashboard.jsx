@@ -133,6 +133,116 @@ function GrowthTracker({ g }) {
   )
 }
 
+// FAO land-evaluation classes. Colour carries the same ordering as the class
+// itself, so the panel is scannable without reading a single label.
+const SUIT_STYLE = {
+  S1: ['bg-leaf-100 text-leaf-800 ring-leaf-200', 'Highly suitable'],
+  S2: ['bg-wheat-300/30 text-wheat-500 ring-wheat-300/60', 'Moderately suitable'],
+  S3: ['bg-orange-100 text-orange-700 ring-orange-200', 'Marginally suitable'],
+  N: ['bg-red-50 text-red-700 ring-red-200', 'Not suitable'],
+  excluded: ['bg-leaf-50 text-muted ring-leaf-100', 'Ruled out'],
+}
+
+function Suitability({ data, loading, error }) {
+  if (loading) {
+    return (
+      <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-leaf-100">
+        <h3 className="font-display text-lg font-semibold">What your land suits</h3>
+        <p className="mt-2 text-sm text-muted">
+          Reading soil and ten years of climate for this location… the first check takes
+          about half a minute, then it is cached.
+        </p>
+        <div className="mt-4 space-y-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-11 animate-pulse rounded-xl bg-leaf-50" />
+          ))}
+        </div>
+      </section>
+    )
+  }
+  if (error) {
+    return (
+      <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-leaf-100">
+        <h3 className="font-display text-lg font-semibold">What your land suits</h3>
+        <p className="mt-2 text-sm text-red-700">{error}</p>
+      </section>
+    )
+  }
+  if (!data) return null
+
+  const { land, results } = data
+  const viable = results.filter((r) => r.suitability !== 'excluded')
+  const ruled = results.filter((r) => r.suitability === 'excluded')
+
+  return (
+    <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-leaf-100">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="font-display text-lg font-semibold">What your land suits</h3>
+        <span className="text-xs text-muted">FAO land-evaluation classes</span>
+      </div>
+
+      <p className="mt-2 text-sm text-muted">
+        {land.texture} · pH {land.ph?.toFixed(2)} · sand {land.sand_pct?.toFixed(0)}% ·
+        rain {land.annual_rain_mm?.toFixed(0)} mm/yr · {land.water_source?.replace(/_/g, ' ')}
+        {land.salinity_flag && land.salinity_flag !== 'none' && ` · salinity ${land.salinity_flag}`}
+      </p>
+
+      <ul className="mt-4 space-y-2">
+        {viable.map((r) => {
+          const [cls, label] = SUIT_STYLE[r.suitability] ?? SUIT_STYLE.excluded
+          return (
+            <li key={r.crop} className="rounded-xl bg-leaf-50/50 p-3.5 ring-1 ring-leaf-100">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`rounded-lg px-2 py-0.5 text-xs font-semibold ring-1 ${cls}`}>
+                  {r.suitability}
+                </span>
+                <span className="font-medium capitalize">{r.crop}</span>
+                <span className="text-xs text-muted">{label}</span>
+                {r.crop === data.current_crop && (
+                  <span className="rounded-full bg-white px-2 py-0.5 text-[11px] text-muted ring-1 ring-leaf-200">
+                    growing now
+                  </span>
+                )}
+              </div>
+              {r.rotation?.effect === 'good' && (
+                <p className="mt-1.5 text-xs text-leaf-700">+ {r.rotation.reason}</p>
+              )}
+              {r.limitations?.map((l, i) => (
+                <p key={i} className="mt-1.5 text-xs text-wheat-500">! {l}</p>
+              ))}
+            </li>
+          )
+        })}
+      </ul>
+
+      {ruled.length > 0 && (
+        <details className="mt-4">
+          <summary className="cursor-pointer text-sm text-muted">
+            {ruled.length} crop{ruled.length > 1 ? 's' : ''} ruled out — and why
+          </summary>
+          <ul className="mt-2 space-y-1.5">
+            {ruled.map((r) => (
+              <li key={r.crop} className="text-xs text-muted">
+                <span className="font-medium capitalize text-ink">{r.crop}</span> — {r.excluded_reason}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      {/* Honesty badge. Most thresholds are seed values not yet checked against
+          a Punjab source, and the panel says so rather than implying authority. */}
+      {data.thresholds_unverified?.length > 0 && (
+        <p className="mt-4 rounded-xl bg-wheat-300/20 px-3.5 py-2.5 text-[11px] leading-relaxed text-wheat-500 ring-1 ring-wheat-300/40">
+          <strong className="font-semibold">Provisional thresholds.</strong> Tolerance ranges for{' '}
+          {data.thresholds_unverified.join(', ')} are starting values awaiting agronomist review.
+          Wheat and rice are the calibrated ones.
+        </p>
+      )}
+    </section>
+  )
+}
+
 function Alerts({ items }) {
   if (!items?.length) {
     return (
@@ -184,7 +294,36 @@ export default function Dashboard({ farm }) {
   const [pred, setPred] = useState(null)
   const [err, setErr] = useState(null)
   const [downloading, setDownloading] = useState(false)
+  const [suit, setSuit] = useState(null)
+  const [suitErr, setSuitErr] = useState(null)
   const yieldNow = useCountUp(pred?.predicted_yield)
+
+  // Suitability is fetched separately from the prediction, not folded into it.
+  // The first call for a farm builds its land profile -- one Earth Engine call
+  // and ten Open-Meteo calls -- so blocking the yield card behind it would make
+  // the whole dashboard feel broken on a farm's first visit.
+  useEffect(() => {
+    let alive = true
+    setSuit(null)
+    setSuitErr(null)
+    authHeader()
+      .then((headers) => fetch(API + '/farms/' + farm.id + '/suitability', { headers }))
+      .then(async (r) => {
+        const body = await r.json()
+        if (!r.ok) throw new Error(body.detail ?? 'HTTP ' + r.status)
+        return body
+      })
+      .then((d) => alive && setSuit(d))
+      .catch((e) => {
+        if (!alive) return
+        setSuitErr(
+          e.message === 'Failed to fetch'
+            ? `Cannot reach the service at ${API}.`
+            : e.message
+        )
+      })
+    return () => { alive = false }
+  }, [farm.id])
 
   useEffect(() => {
     let alive = true
@@ -431,6 +570,8 @@ export default function Dashboard({ farm }) {
       )}
 
       {pred?.growth && <GrowthTracker g={pred.growth} />}
+
+      <Suitability data={suit} loading={!suit && !suitErr} error={suitErr} />
 
       <Alerts items={pred?.alerts} />
 

@@ -7,7 +7,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from app import alerts
+from app import alerts, land, suitability
 from app.db import db
 from app.districts import CROPS, INDEX_FEATURES, one_hot
 from app.growth import growth_stage
@@ -83,7 +83,7 @@ def owned_farm(farm_id: str, user_id: str):
     """Fetch a farm, or refuse. Returns the farm row."""
     farm = (
         db().table("farms")
-        .select("id, owner_id, farmer_name, district, crop_type, season, gps_lat, gps_lng, planting_date")
+        .select("id, owner_id, farmer_name, district, crop_type, season, gps_lat, gps_lng, planting_date, water_source, salinity_flag, last_crop")
         .eq("id", farm_id)
         .execute()
     )
@@ -383,6 +383,93 @@ def predict_for_farm(farm_id: str, user_id: str = Depends(current_user_id)):
     }).execute()
 
     return result
+
+
+# --------------------------------------------------------------- land + suitability
+#
+# Soil and climate columns as stored, so the mapping between the profile dict
+# and the table lives in ONE place rather than being spelled out twice.
+_SOIL_COLS = {"ph": "ph", "clay_pct": "clay_pct", "silt_pct": "silt_pct",
+              "sand_pct": "sand_pct", "texture_class": "texture_class",
+              "texture": "texture", "bulk_dens": "bulk_density",
+              "water_33k": "water_33kpa", "soc_raw": "soc_raw"}
+_CLIM_COLS = {"tmax_mean_c": "tmax_mean_c", "tmin_mean_c": "tmin_mean_c",
+              "tmax_hottest_c": "tmax_hottest_c", "tmin_coldest_c": "tmin_coldest_c",
+              "annual_rain_mm": "annual_rain_mm",
+              "frost_days_per_year": "frost_days_per_year",
+              "years_used": "climate_years_used", "monthly": "monthly"}
+
+
+def land_profile_for(farm_row: dict) -> dict:
+    """This farm's land profile, built on first request and cached thereafter.
+
+    Lazy rather than eager: building it costs an Earth Engine call and ten
+    Open-Meteo calls, which is far too slow to sit inside farm registration.
+    The farmer registers instantly; the profile appears the first time anything
+    actually needs it.
+    """
+    cached = (
+        db().table("land_profiles").select("*").eq("farm_id", farm_row["id"]).execute()
+    ).data
+    if cached:
+        row = cached[0]
+        soil = {k: row.get(col) for k, col in _SOIL_COLS.items()}
+        clim = {k: row.get(col) for k, col in _CLIM_COLS.items()}
+        # jsonb keys come back as strings; window_climate indexes by int month
+        clim["monthly"] = {int(m): v for m, v in (clim.get("monthly") or {}).items()}
+    else:
+        built = land.build_profile(farm_row["gps_lat"], farm_row["gps_lng"])
+        soil, clim = built["soil"], built["climate"]
+        payload = {"farm_id": farm_row["id"]}
+        payload.update({col: soil.get(k) for k, col in _SOIL_COLS.items()})
+        payload.update({col: clim.get(k) for k, col in _CLIM_COLS.items()})
+        db().table("land_profiles").upsert(payload, on_conflict="farm_id").execute()
+
+    return {
+        "soil": soil,
+        "climate": clim,
+        "water_source": farm_row.get("water_source"),
+        "salinity_flag": farm_row.get("salinity_flag"),
+        "last_crop": farm_row.get("last_crop"),
+    }
+
+
+@app.get("/farms/{farm_id}/suitability")
+def farm_suitability(farm_id: str, user_id: str = Depends(current_user_id)):
+    """What this farm's land is suited to grow, best first.
+
+    Same ownership gate as every other farm route.
+    """
+    farm_row = owned_farm(farm_id, user_id)
+    try:
+        profile = land_profile_for(farm_row)
+    except LookupError as e:
+        raise HTTPException(503, f"land data unavailable for this location: {e}")
+
+    results = suitability.assess(profile, district=farm_row["district"])
+    soil = profile["soil"]
+    return {
+        "farm_id": farm_id,
+        "district": farm_row["district"],
+        "current_crop": farm_row["crop_type"],
+        "last_crop": farm_row.get("last_crop"),
+        "land": {
+            "texture": soil.get("texture"),
+            "ph": soil.get("ph"),
+            "sand_pct": soil.get("sand_pct"),
+            "clay_pct": soil.get("clay_pct"),
+            "water_33k": soil.get("water_33k"),
+            "annual_rain_mm": profile["climate"].get("annual_rain_mm"),
+            "water_source": profile.get("water_source"),
+            "salinity_flag": profile.get("salinity_flag"),
+        },
+        # Honest by construction: every threshold that produced these classes
+        # is marked in crops.csv, and anything still `seed` says so here.
+        "thresholds_unverified": sorted(
+            {r["crop"] for r in results if r["thresholds_status"] == "seed"}
+        ),
+        "results": results,
+    }
 
 
 @app.get("/farms/{farm_id}/report")

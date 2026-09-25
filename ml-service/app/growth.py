@@ -1,39 +1,16 @@
 """Phenological stage from days since sowing.
 
+Stage tables and conventional sowing dates come from data/crop_stages.csv and
+data/crops.csv via app.crops -- adding a crop is a CSV row, not a code change.
+
 Calendar-based only -- no satellite confirmation. That is a real limitation:
 a cold spell stretches tillering by a week or two and this will not notice.
-The durations below are rough Punjab norms; they are the tuning knob to adjust
-once field observations exist, and nothing else needs to change.
+The durations are rough Punjab norms; they are the tuning knob to adjust once
+field observations exist, and nothing else needs to change.
 """
 from datetime import date
 
-# (stage, days_after_sowing at which this stage STARTS). Wheat, rabi Punjab:
-# sown Nov, harvested Apr, ~150 days total.
-WHEAT_STAGES = [
-    ("Sowing", 0),
-    ("Tillering", 21),
-    ("Jointing", 55),
-    ("Heading", 85),
-    ("Grain filling", 105),
-    ("Harvest", 135),
-]
-
-# Kharif rice, transplanted Jun/Jul, harvested Oct: ~120 days.
-RICE_STAGES = [
-    ("Transplanting", 0),
-    ("Tillering", 15),
-    ("Panicle initiation", 45),
-    ("Heading", 70),
-    ("Grain filling", 85),
-    ("Harvest", 110),
-]
-
-STAGES = {"wheat": WHEAT_STAGES, "rice": RICE_STAGES}
-
-# Conventional sowing dates, used when a farm has no planting_date. Guessing is
-# better than showing nothing, but the response says which was used so the UI
-# can admit it rather than implying the farmer told us.
-DEFAULT_SOWING = {"wheat": (11, 15), "rice": (6, 25)}   # (month, day)
+from app.crops import DEFAULT_SOWING, STAGES, harvest_style  # noqa: F401
 
 
 def default_sowing_date(crop_type: str, today: date) -> date:

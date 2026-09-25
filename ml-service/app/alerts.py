@@ -91,7 +91,52 @@ def evaluate(farm: dict, prediction, features: dict) -> list[dict]:
                 ),
             })
 
+    # --- weather, scored against the crop's current growth stage -----------
+    #
+    # The two rules above look BACKWARDS at what the satellite already saw.
+    # These look forwards, which is the only kind of warning a farmer can act
+    # on -- and severity comes from the stage, so the same forecast is `info`
+    # during tillering and `critical` while the grain is filling.
+    out.extend(weather_alerts(farm))
+
     return out
+
+
+def weather_alerts(farm: dict) -> list[dict]:
+    """Forecast hazards for this farm's crop at its current stage.
+
+    Returns [] on any failure. A weather API outage must not take the
+    dashboard down with it: a missing alert is better than a 500, and the
+    satellite-based rules above are unaffected.
+    """
+    from datetime import date
+
+    from app.growth import growth_stage
+    from app.weather import for_farm
+
+    lat, lng = farm.get("gps_lat"), farm.get("gps_lng")
+    crop = farm.get("crop_type")
+    if lat is None or lng is None or not crop:
+        return []
+
+    planted = farm.get("planting_date")
+    if isinstance(planted, str) and planted:
+        try:
+            planted = date.fromisoformat(planted[:10])
+        except ValueError:
+            planted = None
+    else:
+        planted = None
+
+    try:
+        stage = growth_stage(crop, planted)["stage"]
+    except (ValueError, KeyError):
+        return []          # no phenology table for this crop yet
+    # Nothing is growing, so nothing is at risk.
+    if stage in ("Not yet sown",):
+        return []
+
+    return for_farm(lat, lng, crop, stage)
 
 
 def sync(farm: dict, candidates: list[dict]) -> list[dict]:

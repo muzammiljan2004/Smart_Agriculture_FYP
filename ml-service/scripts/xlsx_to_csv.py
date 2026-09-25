@@ -16,24 +16,34 @@ from pathlib import Path
 import openpyxl
 
 DATA = Path(__file__).resolve().parents[1] / "data"
-SHEETS = {"Wheat_Yield_Data": "Wheat_Yield_Data.csv",
-          "District_Name_Map": "District_Name_Map.csv"}
+
+# Sheets worth extracting, by name. Anything ending in _Yield_Data is a crop
+# table; the rest of each workbook (Source_Verification, Missing_Unverified,
+# Summary, Data_Dictionary) is provenance for humans, not a join input.
+def wanted_sheets(names):
+    return [n for n in names if n.endswith("_Yield_Data") or n == "District_Name_Map"]
 
 
 def main():
     books = sorted(DATA.glob("*.xlsx"))
     if not books:
         sys.exit(f"no .xlsx found in {DATA}")
-    if len(books) > 1:
-        print(f"several workbooks found; using the newest: {books[-1].name}")
-    book = max(books, key=lambda p: p.stat().st_mtime)
-    print(f"reading {book.name}")
 
-    wb = openpyxl.load_workbook(book, read_only=True, data_only=True)
-    for sheet, out_name in SHEETS.items():
-        if sheet not in wb.sheetnames:
-            sys.exit(f"{book.name} has no sheet {sheet!r} (has: {wb.sheetnames})")
+    # Every workbook, not just the newest: wheat and rice arrive separately and
+    # each carries its own crop table.
+    for book in books:
+        print(f"reading {book.name}")
+        wb = openpyxl.load_workbook(book, read_only=True, data_only=True)
+        sheets = wanted_sheets(wb.sheetnames)
+        if not sheets:
+            print(f"  no *_Yield_Data or District_Name_Map sheet; skipping")
+            continue
+        extract(wb, sheets)
 
+
+def extract(wb, sheets):
+    for sheet in sheets:
+        out_name = f"{sheet}.csv"
         ws = wb[sheet]
         out = DATA / out_name
         written = 0
