@@ -1,0 +1,15 @@
+scope,prev,next,effect,reason
+family,solanaceae,solanaceae,avoid,Shared bacterial wilt and root-knot nematode carry over in the soil between potato tomato brinjal and chilli
+pair,wheat,wheat,avoid,Continuous cereal depletes nitrogen and builds up foot and root rot
+pair,rice,rice,avoid,Continuous rice degrades soil structure and concentrates stem borer pressure
+pair,maize,maize,avoid,Continuous maize builds up stalk borer and depletes nitrogen heavily
+pair,rice,wheat,good,The standard Punjab rice-wheat rotation; wheat follows puddled rice well
+pair,wheat,rice,good,Wheat harvest in April leaves the field free for June transplanting
+pair,cotton,wheat,good,The southern Punjab cotton-wheat system; cotton picking finishes before wheat sowing
+pair,wheat,cotton,good,Wheat vacates the field in April ahead of the cotton sowing window
+pair,potato,wheat,good,Potato leaves a loose well-fertilised seedbed that suits wheat
+pair,onion,wheat,good,Onion is a light feeder and leaves the field weed-free
+pair,sugarcane,wheat,caution,Sugarcane is harvested late and can push wheat sowing past its optimal window
+pair,sugarcane,sugarcane,caution,Ratooning is normal practice but yields decline after the second ratoon
+pair,rice,potato,good,Puddled rice soil loosens well for tuber development
+pair,cotton,maize,caution,Both are heavy feeders; nitrogen needs to be replaced between them

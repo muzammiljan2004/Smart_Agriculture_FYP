@@ -1,0 +1,18 @@
+hazard,stage_class,severity,action
+heat,sowing,warning,Irrigate to cool the seedbed or hold off sowing until the peak passes
+heat,vegetative,info,Monitor only. The crop can still compensate for heat at this stage
+heat,reproductive,critical,Irrigate before the peak. Heat now aborts the yield the crop is setting
+heat,filling,critical,Irrigate now. Heat while the grain or tuber is filling shrivels it and cuts yield sharply
+heat,harvest,info,No action needed. The crop is already mature
+frost,sowing,warning,Hold off sowing until the cold passes
+frost,vegetative,warning,Irrigate before nightfall. Wet soil releases heat overnight and buffers the canopy
+frost,reproductive,critical,Irrigate before nightfall. Frost at flowering destroys the developing yield
+frost,filling,critical,Irrigate before nightfall. Frost now damages the part you harvest
+frost,harvest,warning,Harvest ahead of the frost if the crop is ready
+rain,sowing,info,Useful rain. Hold off irrigating
+rain,vegetative,info,Useful rain. Hold off irrigating
+rain,reproductive,warning,Heavy rain during flowering disrupts pollination
+rain,filling,warning,Check drainage. Standing water while filling invites disease
+rain,harvest,critical,Harvest before the rain or delay cutting. Wet grain sprouts and rots in the field
+wind,filling,warning,Expect lodging. Avoid any late nitrogen which makes stems weaker
+wind,harvest,critical,Harvest early if you can. A lodged crop is hard to cut and sheds grain

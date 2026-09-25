@@ -1,0 +1,89 @@
+crop,stage,days_after_sowing
+wheat,Sowing,0
+wheat,Tillering,21
+wheat,Jointing,55
+wheat,Heading,85
+wheat,Grain filling,105
+wheat,Harvest,135
+rice,Transplanting,0
+rice,Tillering,15
+rice,Panicle initiation,45
+rice,Heading,70
+rice,Grain filling,85
+rice,Harvest,110
+maize,Sowing,0
+maize,Vegetative,18
+maize,Tasseling,50
+maize,Silking,60
+maize,Grain filling,75
+maize,Harvest,100
+sugarcane,Planting,0
+sugarcane,Germination,30
+sugarcane,Tillering,75
+sugarcane,Grand growth,150
+sugarcane,Maturation,270
+sugarcane,Harvest,330
+cotton,Sowing,0
+cotton,Seedling,20
+cotton,Squaring,45
+cotton,Flowering,70
+cotton,Boll development,95
+cotton,First picking,130
+cotton,Harvest,170
+barley,Sowing,0
+barley,Tillering,20
+barley,Jointing,50
+barley,Heading,78
+barley,Grain filling,98
+barley,Harvest,125
+bajra,Sowing,0
+bajra,Vegetative,15
+bajra,Tillering,30
+bajra,Flowering,50
+bajra,Grain filling,65
+bajra,Harvest,85
+jowar,Sowing,0
+jowar,Vegetative,20
+jowar,Booting,45
+jowar,Flowering,60
+jowar,Grain filling,78
+jowar,Harvest,105
+potato,Planting,0
+potato,Emergence,18
+potato,Vegetative,35
+potato,Tuber initiation,50
+potato,Tuber bulking,65
+potato,Harvest,95
+onion,Transplanting,0
+onion,Establishment,20
+onion,Vegetative,45
+onion,Bulb initiation,80
+onion,Bulb development,110
+onion,Harvest,145
+garlic,Planting,0
+garlic,Emergence,15
+garlic,Vegetative,45
+garlic,Bulb initiation,90
+garlic,Bulb development,125
+garlic,Harvest,160
+tomato,Transplanting,0
+tomato,Establishment,15
+tomato,Vegetative,30
+tomato,Flowering,50
+tomato,Fruit set,65
+tomato,First picking,85
+tomato,Harvest,120
+brinjal,Transplanting,0
+brinjal,Establishment,15
+brinjal,Vegetative,35
+brinjal,Flowering,55
+brinjal,Fruit set,70
+brinjal,First picking,90
+brinjal,Harvest,150
+chilli,Transplanting,0
+chilli,Establishment,18
+chilli,Vegetative,40
+chilli,Flowering,65
+chilli,Fruit set,80
+chilli,First picking,105
+chilli,Harvest,175
