@@ -17,6 +17,21 @@ Exits non-zero on a contradiction, so it can go in CI.
 LIMIT: one-sided. Punjab has no acidic districts, so ph_min is never exercised
 here and this check can never validate it. It proves a ceiling is not too low;
 it cannot prove one is not too high.
+
+TEMPERATURE IS MEAN-REFERENCED, ON PURPOSE. temp_min_c/temp_max_c are compared
+against the window MEAN of daily maxima, never the peak -- see suitability.py
+where _range_class reads window_climate()["tmax_c"]. The distinction is large:
+across 170 wheat district-seasons the season mean never once exceeds wheat's
+30C ceiling, while the peak exceeds it in 114 of them. Re-pointing this check
+at the peak would therefore condemn two thirds of Punjab's wheat land and look
+like it had found a bug.
+
+That is not a claim that peaks are harmless -- a spike during grain filling is
+exactly what destroys a wheat crop, and March 2022 hit 40.6C. It is a claim
+that a static suitability CLASS is the wrong place to handle them: suitability
+asks "can this land grow this crop in a normal year", which is a question about
+central tendency. Transient heat is handled on two other paths -- hot_days_35c
+as a model feature, and app/weather.py's stage-aware forecast alerts.
 """
 import csv
 import sys
@@ -33,6 +48,45 @@ MIN_HA = 500
 def load(name, key=None):
     rows = list(csv.DictReader(open(DATA / name, encoding="utf-8-sig")))
     return {r[key]: r for r in rows} if key else rows
+
+
+def check_temperature(registry):
+    """Season-mean tmax against each crop's range, where weather exists.
+
+    Advisory only: it prints and never fails the run. Unlike pH, the weather
+    file is built per crop by scripts.fetch_district_land, so a crop missing
+    here means "not fetched yet", not "contradiction".
+    """
+    path = DATA / "district_season_weather.csv"
+    if not path.exists():
+        return
+    rows = load(path.name)
+    by_crop = defaultdict(list)
+    for r in rows:
+        if r.get("tmax_mean_c"):
+            by_crop[r["crop_type"]].append((float(r["tmax_mean_c"]),
+                                            float(r["tmax_peak_c"])))
+
+    print(f"\nseason-mean tmax vs registry range ({len(rows)} district-seasons)")
+    print(f"{'crop':10s} {'registry':>12s} {'mean tmax':>14s} {'over':>6s}  "
+          f"{'peak tmax':>14s} {'over':>6s}")
+    print("-" * 70)
+    for crop, vals in sorted(by_crop.items()):
+        reg = registry.get(crop)
+        if not reg:
+            continue
+        lo, hi = float(reg["temp_min_c"]), float(reg["temp_max_c"])
+        means = sorted(v[0] for v in vals)
+        peaks = sorted(v[1] for v in vals)
+        n_m = sum(1 for v in means if not lo <= v <= hi)
+        n_p = sum(1 for v in peaks if v > hi)
+        print(f"{crop:10s} {lo:5.0f}-{hi:<6.0f} {means[0]:6.1f}-{means[-1]:<7.1f} "
+              f"{n_m:>3d}/{len(means):<3d} {peaks[0]:6.1f}-{peaks[-1]:<7.1f} "
+              f"{n_p:>3d}/{len(peaks):<3d}")
+    missing = sorted(set(registry) - set(by_crop))
+    if missing:
+        print(f"\nno weather yet (run scripts.fetch_district_land): "
+              f"{', '.join(missing)}")
 
 
 def main():
@@ -64,6 +118,8 @@ def main():
               f"{len(pts):>4d}  {note}")
         if out:
             bad.append((crop, len(out), len(pts), min(out), max(out)))
+
+    check_temperature(registry)
 
     if bad:
         print("\nCONTRADICTIONS -- the registry excludes ground that grows the crop:")
