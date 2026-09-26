@@ -175,15 +175,31 @@ def rotation(prev_crop, next_crop):
 
 
 if __name__ == "__main__":
-    # one-hot width must match what a trained model expects
-    assert CROPS == ("wheat", "rice"), CROPS
-    assert len(FEATURE_NAMES) == 7, FEATURE_NAMES
-    assert one_hot("wheat") == [1.0, 0.0] and one_hot("rice") == [0.0, 1.0]
+    # The one-hot layout. This used to pin the literal pair ("wheat","rice"),
+    # which made adding a crop fail the check for the wrong reason -- the
+    # value changed, but nothing was broken. What actually matters is the
+    # INVARIANTS, so assert those instead and let the set grow.
+    #
+    # Existing columns must not move. A trained model.pkl indexes this layout
+    # positionally, so inserting a crop ahead of wheat would silently remap
+    # every prediction rather than raise.
+    assert CROPS[0] == "wheat" and CROPS[1] == "rice", CROPS
+    assert len(FEATURE_NAMES) == len(INDEX_FEATURES) + len(CROPS), FEATURE_NAMES
+
+    # model_order must be a dense 1..N permutation. A duplicate would put two
+    # crops in one column; a gap would leave a column no crop ever sets.
+    orders = sorted(int(CROP_ROWS[c]["model_order"]) for c in CROPS)
+    assert orders == list(range(1, len(CROPS) + 1)), orders
+
+    # Exactly one column hot, in the right slot, for every crop.
+    for i, c in enumerate(CROPS):
+        oh = one_hot(c)
+        assert sum(oh) == 1.0 and oh[i] == 1.0, (c, oh)
 
     # a registry crop with no model_order is known but not a model input
-    assert "sugarcane" in ALL_CROPS and "sugarcane" not in CROPS
+    assert "garlic" in ALL_CROPS and "garlic" not in CROPS
     try:
-        one_hot("sugarcane")
+        one_hot("garlic")
         raise AssertionError("one_hot must refuse a non-model crop")
     except ValueError:
         pass
