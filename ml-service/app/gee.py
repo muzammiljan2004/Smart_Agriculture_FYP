@@ -3,6 +3,8 @@
 Auth (one-time, per machine):  earthengine authenticate
 """
 import os
+import socket
+import time
 from datetime import datetime, timezone
 from functools import lru_cache
 
@@ -107,9 +109,47 @@ def get_district_geometry(standardized_name: str):
     return fc.geometry()
 
 
+# A reduceRegion over a big rabi district legitimately runs ~20-40s, and the
+# worst measured row took a little over two minutes. 300s is far beyond any
+# real row while still being finite, which is the whole point: without it a
+# getInfo() blocks forever.
+#
+# WHY THIS IS NEEDED. ee's getInfo() is a blocking HTTPS call with no deadline
+# of its own. When a connection dies without sending a FIN -- flaky wifi, a NAT
+# table expiring, Earth Engine dropping a long request -- the socket never
+# returns and the run hangs silently: no error, no retry, no exit. A 10.5-hour
+# --all-crops run lost its last 50 minutes to exactly this, sitting on a dead
+# socket 58 rows into rice while the caller waited for a row that never came.
+GEE_TIMEOUT_SECONDS = 300
+
+
 @lru_cache(maxsize=1)
 def init():
+    # Global, because the ee client builds its own transport and gives no hook
+    # to pass a timeout down. socket.setdefaulttimeout only affects sockets
+    # created after this call, so it must run before the first ee request.
+    socket.setdefaulttimeout(GEE_TIMEOUT_SECONDS)
     ee.Initialize(project=os.environ["GEE_PROJECT"])
+
+
+def with_retry(fn, *, attempts=3, what="earth engine call"):
+    """Run fn(), retrying transient network failures with a backoff.
+
+    Retries only transport-level faults. An ee.EEException is left to
+    propagate: a bad geometry or a missing asset fails identically on every
+    attempt, and retrying it three times just triples the wait before the
+    caller gets the error it needed to see.
+    """
+    for attempt in range(1, attempts + 1):
+        try:
+            return fn()
+        except (socket.timeout, TimeoutError, OSError, ConnectionError) as e:
+            if attempt == attempts:
+                raise
+            wait = 2 ** attempt
+            print(f"  [gee] {what} failed ({type(e).__name__}: {e}); "
+                  f"retry {attempt}/{attempts - 1} in {wait}s")
+            time.sleep(wait)
 
 
 def _mask_clouds(img):
@@ -150,7 +190,7 @@ def fetch_indices(bbox=SHEIKHUPURA_BBOX, start="2025-01-01", end="2025-03-31", s
         .map(_mask_clouds)
     )
 
-    n_images = col.size().getInfo()
+    n_images = with_retry(lambda: col.size().getInfo(), what="scene count")
     if n_images == 0:
         raise NoImagery(
             f"no Sentinel-2 scenes in {start}..{end} under 20% cloud. "
@@ -197,7 +237,12 @@ def fetch_indices(bbox=SHEIKHUPURA_BBOX, start="2025-01-01", end="2025-03-31", s
     )
 
     # One getInfo round trip for the values and the scene date together.
-    out = stats.set("t", col.aggregate_max("system:time_start")).getInfo()
+    # This is the expensive call -- the median composite and polygon reduction
+    # both happen server-side behind it -- so it is the one that hangs.
+    out = with_retry(
+        lambda: stats.set("t", col.aggregate_max("system:time_start")).getInfo(),
+        what="index reduction",
+    )
 
     ts = out.pop("t")
     result = {
@@ -211,7 +256,44 @@ def fetch_indices(bbox=SHEIKHUPURA_BBOX, start="2025-01-01", end="2025-03-31", s
 
 
 if __name__ == "__main__":
-    # Self-check: needs GEE auth. Rabi wheat, peak vegetative growth.
+    # --- retry logic, offline: no auth, no network, safe mid-fetch ----------
+    _calls = []
+
+    def _flaky():
+        _calls.append(1)
+        if len(_calls) < 3:
+            raise socket.timeout("simulated dead socket")
+        return "ok"
+
+    assert with_retry(_flaky, what="self-check") == "ok"
+    assert len(_calls) == 3, _calls
+
+    def _always():
+        raise ConnectionError("always down")
+
+    try:
+        with_retry(_always, attempts=2, what="self-check")
+        raise AssertionError("exhausted retries must raise, not hang")
+    except ConnectionError:
+        pass
+
+    # A real EE fault (bad asset, bad geometry) fails identically every time,
+    # so retrying it only triples the wait before the caller sees the error.
+    class _EEError(Exception):
+        pass
+
+    def _bad():
+        raise _EEError("Image.load: asset not found")
+
+    try:
+        with_retry(_bad, what="self-check")
+        raise AssertionError("EE errors must propagate, not retry")
+    except _EEError:
+        pass
+
+    print("retry self-check OK")
+
+    # --- live check: needs GEE auth. Rabi wheat, peak vegetative growth. ----
     r = fetch_indices(start="2025-01-15", end="2025-03-15")
     print(r)
     assert r["ndvi"] is not None, "NDVI came back empty -- region or dates are wrong"
