@@ -485,6 +485,25 @@ def main():
         # Read off the data, not hardcoded: app/main.py refuses any crop not
         # in this list, so it must reflect what was actually trained on.
         "trained_crops": sorted({c for c, t in zip(crops, is_test) if not t}),
+        # TRAINING rows per crop, so the API can scale its confidence caveat to
+        # how much evidence actually backs each crop. Previously the caveat was
+        # `if crop_type == "rice"`, hardcoded, which was blind to row counts and
+        # would have gone exactly backwards here: rice now has 186 training rows
+        # while barley has 112, so the one crop flagged as thin was among the
+        # better-supported ones. Counted on the TRAIN split, not the whole file,
+        # because holdout rows are not evidence the model learned from.
+        "crop_rows": dict(Counter(c for c, t in zip(crops, is_test) if not t)),
+        # Per-crop holdout R2. Recorded because the POOLED figure is not a
+        # statement about any single crop and, with crops whose yields span
+        # 0.8 to 65 t/ha, is dominated by between-crop variance: a lookup
+        # table that knows only the crop name scores 0.914 here. The pooled
+        # model scores 0.921. Six crops are individually NEGATIVE -- worse
+        # than their own mean -- and the API needs to be able to say so.
+        "per_crop_r2": {
+            c: round(float(r2_score(y_te[m], rf.predict(X_te[m]))), 4)
+            for c in sorted(set(crops[is_test]))
+            if (m := (crops[is_test] == c)).sum() >= 5
+        },
         "source": f"real:{REAL_CSV.name}",
         "n_rows": int(len(y_tr)),
         "model_name": MODEL_NAME,

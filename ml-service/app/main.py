@@ -10,6 +10,14 @@ from pydantic import BaseModel, Field
 from app import alerts, land, suitability
 from app.db import db
 from app.districts import CROPS, INDEX_FEATURES, one_hot
+
+# Below this many TRAINING rows, a crop's prediction carries a thin-data
+# caveat. 150 is a judgement call, not a derived threshold: it sits above the
+# crops that visibly struggle in the per-crop holdout (barley 112, maize 129,
+# cotton 138) and below those that hold up (wheat 204, tomato 192, potato 189).
+# Row count is necessary, not sufficient -- tomato has 192 rows and still
+# scores negative -- which is why per_crop_r2 is checked separately below.
+MIN_ROWS_CONFIDENT = 150
 from app.growth import growth_stage
 from app import report
 from app.train import MODEL_PATH
@@ -343,11 +351,36 @@ def assess(district: str, crop_type: str, yield_rows: list) -> tuple[str, list[s
             "Model trained on synthetic data - every prediction here is illustrative, not validated."
         )
 
-    # 2. The crop. Rice reaching this point at all means it has training rows
-    #    (predict() refuses otherwise), but "some" is not "enough".
-    if crop_type == "rice":
+    # 2. The crop, scaled to the evidence actually behind it.
+    #
+    # Was `if crop_type == "rice"`, hardcoded. That was blind to row counts and
+    # by the 11-crop retrain it had gone backwards: rice has 186 training rows
+    # while barley has 112, so the single crop flagged as thin was among the
+    # better-supported ones. The bundle now carries crop_rows, so this reads
+    # the model instead of a guess and cannot go stale across a retrain.
+    n = (_bundle.get("crop_rows") or {}).get(crop_type)
+    if n is None:
         caveats.append(
-            "Limited training data - predictions for rice are less reliable than for wheat."
+            f"Row count for {crop_type} is not recorded in this model - treat its "
+            f"accuracy as unverified."
+        )
+    elif n < MIN_ROWS_CONFIDENT:
+        best = max((_bundle.get("crop_rows") or {}).items(), key=lambda kv: kv[1],
+                   default=(None, 0))
+        caveats.append(
+            f"Limited training data - {n} rows for {crop_type}, against "
+            f"{best[1]} for {best[0]}. Predictions are less reliable."
+        )
+
+    # 2b. Accuracy is per crop, and pooling hides that. A model scoring well
+    #     across all crops can still be worse than useless on one of them --
+    #     see per_crop_r2 in the bundle, written by scripts.train_real.
+    r2 = (_bundle.get("per_crop_r2") or {}).get(crop_type)
+    if r2 is not None and r2 < 0:
+        caveats.append(
+            f"This model does not predict {crop_type} yield: on held-out seasons it "
+            f"scores worse (R2 {r2:.2f}) than simply using the {crop_type} average. "
+            f"Treat the number as indicative only."
         )
 
     # 3. The district. Distinguish "no figures at all" from "figures, but
