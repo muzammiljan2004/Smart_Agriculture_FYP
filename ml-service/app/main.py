@@ -18,7 +18,7 @@ from app.districts import CROPS, INDEX_FEATURES, one_hot
 # Row count is necessary, not sufficient -- tomato has 192 rows and still
 # scores negative -- which is why per_crop_r2 is checked separately below.
 MIN_ROWS_CONFIDENT = 150
-from app.growth import growth_stage
+from app.growth import default_sowing_date, growth_stage
 from app import report
 from app.train import MODEL_PATH
 
@@ -91,7 +91,7 @@ def owned_farm(farm_id: str, user_id: str):
     """Fetch a farm, or refuse. Returns the farm row."""
     farm = (
         db().table("farms")
-        .select("id, owner_id, farmer_name, district, crop_type, season, gps_lat, gps_lng, planting_date, water_source, salinity_flag, last_crop")
+        .select("id, owner_id, farmer_name, district, crop_type, season, gps_lat, gps_lng, planting_date, water_source, salinity_flag, last_crop, area_hectares, harvest_confirmed, actual_harvest_date")
         .eq("id", farm_id)
         .execute()
     )
@@ -641,3 +641,152 @@ def list_farms(user_id: str = Depends(current_user_id)):
         .execute()
     )
     return res.data
+
+
+# --------------------------------------------------------------- lifecycle
+# Field-level monitoring. Separate from the yield routes above on purpose:
+# these read a TIME SERIES over one field, while yield prediction reads one
+# composite over a district. They share nothing but the ownership gate.
+
+def _field_window(farm_row, start=None, end=None):
+    """Resolve the fetch window, defaulting to this field's current season."""
+    from app.field import season_bounds
+
+    sown = (date.fromisoformat(farm_row["planting_date"])
+            if farm_row.get("planting_date")
+            else default_sowing_date(farm_row["crop_type"], date.today()))
+    if start and end:
+        return sown, start, end
+    a, b = season_bounds(farm_row["crop_type"], sown)
+    return sown, start or a, end or b
+
+
+def _stored_series(farm_id):
+    """Everything already in satellite_features for this farm, oldest first."""
+    res = (
+        db().table("satellite_features")
+        .select("date, ndvi, evi, ndwi, savi, nbr, vv, vh, cloud_pct, valid_px, source")
+        .eq("farm_id", farm_id)
+        .order("date")
+        .execute()
+    )
+    return res.data or []
+
+
+@app.get("/farms/{farm_id}/timeseries")
+def farm_timeseries(farm_id: str, start: str = None, end: str = None,
+                    refresh: bool = False, user_id: str = Depends(current_user_id)):
+    """Field-level satellite time series for the growth curve.
+
+    Serves what is stored unless `refresh=true`. The fetch is 30-60s of Earth
+    Engine, which is far too slow to sit in front of a dashboard load, so
+    going to GEE is opt-in rather than the default -- exactly the mistake the
+    district pipeline avoids by fetching in a script.
+
+    Rows are ordered by date and every row carries every key, with null where
+    that sensor did not observe that date.
+    """
+    farm_row = owned_farm(farm_id, user_id)
+
+    if refresh:
+        from app.field import field_series
+        from app.gee import NoImagery
+
+        sown, a, b = _field_window(farm_row, start, end)
+        try:
+            rows = field_series(farm_row["gps_lat"], farm_row["gps_lng"],
+                                farm_row.get("area_hectares"), a, b)
+        except NoImagery as e:
+            raise HTTPException(404, str(e))
+        except Exception as e:                       # noqa: BLE001
+            # A GEE outage must not take down a route that can still serve
+            # what is already stored.
+            print(f"[timeseries] refresh failed for {farm_id[:8]}: {e}")
+            raise HTTPException(503, f"Earth Engine unavailable: {e}")
+        _store_series(farm_id, rows)
+
+    series = _stored_series(farm_id)
+    return {
+        "farm_id": farm_id,
+        "crop_type": farm_row["crop_type"],
+        "area_hectares": farm_row.get("area_hectares"),
+        # Say so rather than letting a 1 ha default pass as a measurement.
+        "area_assumed": farm_row.get("area_hectares") is None,
+        "count": len(series),
+        "series": series,
+    }
+
+
+def _store_series(farm_id, rows):
+    """Upsert a field series into satellite_features on (farm_id, date)."""
+    if not rows:
+        return
+    cols = ("ndvi", "evi", "ndwi", "savi", "nbr", "vv", "vh", "cloud_pct", "valid_px")
+    payload = [
+        {"farm_id": farm_id, "date": r["date"],
+         **{k: r.get(k) for k in cols},
+         "source": "+".join(sorted(set(r.get("sources") or []))) or None}
+        for r in rows
+    ]
+    db().table("satellite_features").upsert(payload, on_conflict="farm_id,date").execute()
+
+
+@app.get("/farms/{farm_id}/harvest")
+def farm_harvest(farm_id: str, refresh: bool = False,
+                 user_id: str = Depends(current_user_id)):
+    """Has this field been harvested? Rule-based, and not yet validated.
+
+    `confidence` is a weighted count of corroborating evidence, NOT a
+    calibrated probability -- see app/harvest.py. Nothing here has been
+    scored against real harvest dates yet.
+    """
+    from app.harvest import detect
+
+    farm_row = owned_farm(farm_id, user_id)
+    if refresh:
+        farm_timeseries(farm_id, refresh=True, user_id=user_id)
+
+    sown, _, _ = _field_window(farm_row)
+    result = detect(
+        _stored_series(farm_id),
+        farm_row["crop_type"],
+        sown,
+        confirmed_date=(farm_row.get("actual_harvest_date")
+                        if farm_row.get("harvest_confirmed") else None),
+    )
+    result["crop_type"] = farm_row["crop_type"]
+    result["sowing_date"] = sown.isoformat()
+    result["sowing_date_estimated"] = not farm_row.get("planting_date")
+    return result
+
+
+class HarvestConfirm(BaseModel):
+    harvested: bool = True
+    actual_harvest_date: date | None = None
+
+
+@app.post("/farms/{farm_id}/harvest/confirm")
+def confirm_harvest(farm_id: str, body: HarvestConfirm,
+                    user_id: str = Depends(current_user_id)):
+    """Record what the farmer actually did. This is ground truth.
+
+    Every confirmation collected here is one row of the validation set that
+    scripts/validate_harvest.py scores the detector against -- which is the
+    only thing that will ever turn `confidence` into a measured number.
+    """
+    owned_farm(farm_id, user_id)
+
+    if body.harvested and not body.actual_harvest_date:
+        # Also a CHECK in the migration; refused here so the caller gets a
+        # readable message rather than a Postgres constraint violation.
+        raise HTTPException(422, "actual_harvest_date is required when harvested is true")
+    if body.actual_harvest_date and body.actual_harvest_date > date.today():
+        raise HTTPException(422, "actual_harvest_date cannot be in the future")
+
+    patch = {
+        "harvest_confirmed": body.harvested,
+        "actual_harvest_date": (body.actual_harvest_date.isoformat()
+                                if body.harvested and body.actual_harvest_date else None),
+    }
+    db().table("farms").update(patch).eq("id", farm_id).execute()
+    return {"farm_id": farm_id, **patch}

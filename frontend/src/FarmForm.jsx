@@ -98,6 +98,10 @@ export default function FarmForm({ onCreated }) {
     crop_type: 'wheat',
     gps_lat: DISTRICTS.Sheikhupura.lat,
     gps_lng: DISTRICTS.Sheikhupura.lng,
+    // Sizes the circle the satellite pipeline reduces over. Blank is allowed
+    // and falls back to 1 ha server-side, flagged as assumed rather than
+    // passed off as measured.
+    area_hectares: '',
     planting_date: '',
     water_source: 'canal_and_tubewell',
     salinity_flag: 'none',
@@ -139,6 +143,9 @@ export default function FarmForm({ onCreated }) {
         farmer_name: form.farmer_name,
         gps_lat: parseFloat(form.gps_lat),
         gps_lng: parseFloat(form.gps_lng),
+        // '' would fail the numeric column, and 0 would violate the CHECK and
+        // give a zero-radius circle. null means "not told", which is honest.
+        area_hectares: form.area_hectares ? parseFloat(form.area_hectares) : null,
         district: form.district,
         crop_type: form.crop_type,
         season: SEASON[form.crop_type],
@@ -234,6 +241,24 @@ export default function FarmForm({ onCreated }) {
         </div>
         <p className="mt-2 text-xs text-muted">
           Prefilled with {form.district} town centre — adjust to your plot.
+        </p>
+
+        {/* Area sizes the circle the satellite pipeline reduces over. Without
+            it every field is assumed to be 1 ha, which for a 10 ha holding
+            samples a tenth of the land and calls it the whole farm. */}
+        <label className="mt-5 block text-sm font-medium">
+          Area (hectares)
+          <input
+            type="number" step="0.1" min="0.1" max="10000"
+            value={form.area_hectares} onChange={set('area_hectares')}
+            placeholder="e.g. 2.5"
+            className={`${field} tnum`}
+          />
+        </label>
+        <p className="mt-2 text-xs text-muted">
+          Optional, but it decides how much land around your pin we read.
+          Left blank we assume 1 hectare. 1 acre ≈ 0.4 ha, 1 killa ≈ 0.4 ha,
+          1 murabba ≈ 10 ha.
         </p>
 
         {/* The three things a farmer knows and no raster does. Salinity in
