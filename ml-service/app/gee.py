@@ -4,11 +4,13 @@ Auth (one-time, per machine):  earthengine authenticate
 """
 import os
 import socket
+import threading
 import time
 from datetime import datetime, timezone
 from functools import lru_cache
 
 import ee
+import httplib2
 from dotenv import load_dotenv
 
 from app.districts import DISTRICTS
@@ -125,11 +127,57 @@ GEE_TIMEOUT_SECONDS = 300
 
 @lru_cache(maxsize=1)
 def init():
-    # Global, because the ee client builds its own transport and gives no hook
-    # to pass a timeout down. socket.setdefaulttimeout only affects sockets
-    # created after this call, so it must run before the first ee request.
+    # Belt: give ee's own transport an explicit timeout. ee.Initialize builds
+    # an httplib2.Http() with timeout=None, and httplib2 only calls
+    # sock.settimeout() when a timeout was actually supplied -- so the default
+    # connection blocks forever. socket.setdefaulttimeout() does NOT cover
+    # this; it was tried, and a run still hung for 4.7 hours.
     socket.setdefaulttimeout(GEE_TIMEOUT_SECONDS)
-    ee.Initialize(project=os.environ["GEE_PROJECT"])
+    ee.Initialize(
+        project=os.environ["GEE_PROJECT"],
+        http_transport=httplib2.Http(timeout=GEE_TIMEOUT_SECONDS),
+    )
+
+
+def _call_with_deadline(fn, seconds):
+    """Run fn() and give up after `seconds` of WALL CLOCK.
+
+    Braces: the transport timeout above bounds one socket operation, which is
+    not the same as bounding the request. A socket timeout restarts every time
+    a byte arrives, so a server that dribbles a response, or stalls after
+    sending headers, never trips it. That is the shape of the hang actually
+    observed -- the process sat for 4.7 hours having burned 6 seconds of CPU,
+    which is a connection that is open and idle, not one that is dead.
+
+    A DAEMON THREAD, not ThreadPoolExecutor. Two ways the executor defeats
+    the purpose, both found by this function hanging its own test:
+    `with ThreadPoolExecutor(...)` calls shutdown(wait=True) on __exit__ and
+    re-joins the thread we are abandoning, and the executor also registers an
+    atexit hook that joins its workers -- which moves the hang from the middle
+    of the run to interpreter shutdown. A daemon thread has neither.
+
+    ponytail: the abandoned thread is not killed, because Python cannot
+    interrupt a blocking C-level socket read. It leaks until the OS drops the
+    connection. Acceptable at one leaked thread per stalled row across a run
+    of a few thousand; if that ever stops being true, move the fetch to a
+    subprocess and kill the process instead.
+    """
+    box = {}
+
+    def runner():
+        try:
+            box["value"] = fn()
+        except BaseException as e:      # noqa: BLE001 - re-raised on the caller's thread
+            box["error"] = e
+
+    t = threading.Thread(target=runner, daemon=True)
+    t.start()
+    t.join(seconds)
+    if t.is_alive():
+        raise TimeoutError(f"no response after {seconds}s wall clock")
+    if "error" in box:
+        raise box["error"]
+    return box["value"]
 
 
 def with_retry(fn, *, attempts=3, what="earth engine call"):
@@ -142,7 +190,7 @@ def with_retry(fn, *, attempts=3, what="earth engine call"):
     """
     for attempt in range(1, attempts + 1):
         try:
-            return fn()
+            return _call_with_deadline(fn, GEE_TIMEOUT_SECONDS)
         except (socket.timeout, TimeoutError, OSError, ConnectionError) as e:
             if attempt == attempts:
                 raise
@@ -289,6 +337,26 @@ if __name__ == "__main__":
         with_retry(_bad, what="self-check")
         raise AssertionError("EE errors must propagate, not retry")
     except _EEError:
+        pass
+
+    # A call that would block forever is abandoned on schedule, and the
+    # interpreter still exits -- the second half is not incidental. An earlier
+    # ThreadPoolExecutor version passed the timeout assertion and then hung at
+    # shutdown, which would have parked the fetch at the end of a run instead
+    # of the middle. If this script ever stops exiting, that is the regression.
+    _t = time.time()
+    try:
+        _call_with_deadline(lambda: time.sleep(600), seconds=2)
+        raise AssertionError("a blocking call must not outlive its deadline")
+    except TimeoutError:
+        assert time.time() - _t < 5, "deadline overran badly"
+
+    assert _call_with_deadline(lambda: 42, seconds=5) == 42
+
+    try:
+        _call_with_deadline(lambda: 1 / 0, seconds=5)
+        raise AssertionError("real errors must propagate, not be swallowed")
+    except ZeroDivisionError:
         pass
 
     print("retry self-check OK")
