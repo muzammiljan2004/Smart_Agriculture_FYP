@@ -281,14 +281,45 @@ def main():
     # rewrite, because every crop takes the identical path: the only thing
     # that changes is which observation window season_window() returns.
     #
-    # Order matters for a run that may be interrupted. Crops are fetched
-    # least-rows-first so the greatest number of CROPS is represented
-    # earliest -- a half-finished run then still trains a multi-crop model,
-    # rather than one crop fetched perfectly and ten not started.
+    # Order matters for a run that may be interrupted, and the right order
+    # changes as the dataset fills.
+    #
+    # This was least-TOTAL-rows-first, to get the most crops represented
+    # earliest from a standing start. That rule expired once most crops were
+    # largely fetched: it kept sorting on total size while what is actually at
+    # risk is the OUTSTANDING work, and the two diverged badly. Potato and
+    # tomato read as "small" on their old totals and were scheduled last,
+    # while carrying 528 of the 800 remaining rows between them -- so an
+    # interruption would have cost the two biggest blocks of genuinely new
+    # data and saved a handful of five-row top-ups.
+    #
+    # So: most-outstanding-first, counted against what is already on disk.
+    # Self-correcting on every resume, because the counts are recomputed here
+    # rather than written down.
     if args.all_crops:
-        order = sorted(CROP_FILES, key=lambda c: len(load_yield_rows(c)))
-        print(f"all-crops run, {len(order)} crops, least data first:")
-        print("  " + ", ".join(order))
+        done = load_done()
+        name_map = load_name_map()
+
+        def _norm(s):
+            return "".join(ch for ch in str(s).lower() if ch.isalnum())
+
+        outstanding = {}
+        for c in CROP_FILES:
+            # Standardise here too. load_done() holds GAUL names while the
+            # source prints its own, so comparing them raw would find no
+            # overlap and report every crop as untouched.
+            planned = set()
+            for r in load_yield_rows(c):
+                std = name_map.get(_norm(r["District"]))
+                if std and int(r["Season"].split("-")[0]) >= SEASONS_WITH_IMAGERY_FROM:
+                    planned.add((std, r["Season"]))
+            outstanding[c] = sum(1 for d, s in planned if (d, s, c) not in done)
+        order = sorted(CROP_FILES, key=lambda c: -outstanding[c])
+        total = sum(outstanding.values())
+        print(f"all-crops run, {len(order)} crops, most outstanding work first "
+              f"({total} rows to go):")
+        for c in order:
+            print(f"    {c:10s} {outstanding[c]:>5d}")
         bar = "=" * 62
         for n, c in enumerate(order, 1):
             print("")
