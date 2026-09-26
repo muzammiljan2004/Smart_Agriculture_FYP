@@ -94,6 +94,75 @@ it with a fixed `random_state`, so every teammate builds an identical one.
 Committing the pickle would add ~4.7 MB of undeltifiable binary to git history
 per retrain.
 
+## Verifying the model claims
+
+Everything below reads committed CSVs. **No Earth Engine account, no Supabase
+keys, no `.env`** — clone, install requirements, run. Each takes seconds to a
+few minutes.
+
+```bash
+cd ml-service
+
+# Is the registry consistent with agriculture Punjab actually practises?
+# Joins measured district soil pH to PBS area records. Exits non-zero if any
+# crop's tolerance range excludes ground that demonstrably grows it.
+python -m scripts.check_registry
+
+# Train and score the production model. ~25s.
+# Refuses to run if the CSV holds a crop the feature vector cannot represent,
+# rather than dropping those rows silently.
+python -m scripts.train_real --no-save
+
+# WHY the satellite features do not predict yield. Six checks. ~1 min
+# (checks 5-6 need Earth Engine and skip themselves without it).
+python -m scripts.diagnose_signal
+
+# The honest metric: yield ANOMALY, district-crop norm divided out,
+# baseline rebuilt inside every fold. Includes the PLACEBO control. ~5 min.
+python -m scripts.evaluate_anomaly
+```
+
+### Reading the numbers
+
+`scripts.train_real` reports a pooled R² around 0.92. **That figure is not a
+yield-prediction result and should not be quoted as one.** Yields span 0.83
+t/ha (jowar) to 63.5 (sugarcane), so 92% of all variance is *between* crops
+and a lookup table knowing only the crop name scores about the same.
+`diagnose_signal` demonstrates this; `evaluate_anomaly` removes it.
+
+Four numbers, four different questions:
+
+| metric | what is held out | result |
+|---|---|---|
+| CV | nothing — same districts and seasons | 0.918 |
+| holdout | 2021-22, 2022-23 — but districts were seen | 0.921 |
+| GroupKFold | whole districts | 0.898 |
+| **anomaly + GroupKFold** | districts *and* the district-crop norm | **~0.00** |
+
+The last row is the generalisation result. A **placebo** of six random
+constants per district scores at the *top* of that column, beating satellite
+indices, soil and weather alike — which is the finding: district-aggregated
+optical imagery cannot isolate one crop's yield in a mixed-crop landscape.
+
+### Module self-checks
+
+Each runs offline and asserts its own invariants:
+
+```bash
+python -m app.crops        # one-hot layout, sowing windows, rotation rules
+python -m app.growth       # phenology, harvest dates, multi-pick crops
+python -m app.suitability  # FAO S1/S2/S3/N, sowing windows, year wrap
+python -m app.weather      # stage sensitivity, hazard thresholds
+python -m tests.test_inference_vector   # model input assembled BY NAME
+```
+
+`app.gee` also has one, but it needs Earth Engine auth:
+
+```bash
+earthengine authenticate
+python -m app.gee
+```
+
 ## Tests
 
 ```bash

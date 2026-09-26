@@ -64,7 +64,11 @@ def check_wide_layout():
     names = BASE + list(SOIL) + list(WX)
     use_schema(names)
     row = m.build_vector(feats("wheat"), extra={**SOIL, **WX})
-    assert len(row) == 19, len(row)
+    # len(names), not a literal. This asserted 19 and broke the moment CROPS
+    # went from 2 crops to 11 -- failing for the wrong reason, because the
+    # width changed legitimately and nothing was actually wrong. The invariant
+    # is that the row matches the DECLARED schema, whatever its width.
+    assert len(row) == len(names), (len(row), len(names))
     for n, v in {**IDX, **SOIL, **WX}.items():
         assert row[names.index(n)] == v, f"{n} in wrong column"
 
