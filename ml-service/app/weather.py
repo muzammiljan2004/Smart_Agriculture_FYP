@@ -24,13 +24,86 @@ import csv
 import json
 import urllib.error
 import urllib.request
+from datetime import timedelta
 from pathlib import Path
 
 from app.crops import CROP_ROWS, STAGES, requirements
 
 DATA = Path(__file__).resolve().parents[1] / "data"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
+ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
 FORECAST_DAYS = 16
+
+# Counted as days above a line rather than folded into a mean, because a mean
+# hides the thing that actually destroys a wheat crop: a short spike during
+# grain filling. March 2022 was not a warm season on average.
+HOT_DAY_C = 35.0
+FROST_C = 2.0
+
+
+def summarise_daily(tmax, tmin, rain):
+    """The six season-weather model features, from daily series.
+
+    THE SINGLE DEFINITION. scripts/fetch_district_land.py builds the training
+    columns through this function and app/main.py builds the inference row
+    through it, so the two cannot drift. Duplicating the arithmetic would be
+    the classic train/serve skew: both sides look right in isolation and the
+    model quietly scores against a differently-computed feature.
+    """
+    tmax = [v for v in tmax if v is not None]
+    tmin = [v for v in tmin if v is not None]
+    rain = [v for v in rain if v is not None]
+    if not tmax:
+        raise LookupError("no daily temperatures in window")
+    return {
+        "tmax_mean_c": round(sum(tmax) / len(tmax), 3),
+        "tmin_mean_c": round(sum(tmin) / len(tmin), 3),
+        "tmax_peak_c": round(max(tmax), 2),
+        "rain_mm": round(sum(rain), 1),
+        "frost_days": sum(1 for v in tmin if v < FROST_C),
+        "hot_days_35c": sum(1 for v in tmax if v > HOT_DAY_C),
+    }
+
+
+def season_weather(lat, lng, start, end, timeout=60):
+    """Observed weather over one growing window, for the model's input row.
+
+    Returns the summary plus `complete`, which matters more than it looks.
+    Training rows were built from finished seasons; a farmer asking in
+    February has a window that runs to April, and the archive can only answer
+    to today. The partial answer is not wrong so much as differently scaled --
+    rain_mm and hot_days_35c are cumulative, so a half-finished season reports
+    roughly half of each and the model reads it as a dry, mild year.
+
+    So the shortfall is reported rather than hidden, and the caller decides.
+    """
+    from datetime import date
+
+    today = date.today()
+    end_d = date.fromisoformat(end)
+    # The archive lags real time by about five days; asking past it returns
+    # nulls, which summarise_daily would then average over a shorter series
+    # without saying so.
+    capped = min(end_d, today - timedelta(days=5))
+    if capped < date.fromisoformat(start):
+        raise LookupError(f"window {start}..{end} has not started yet")
+
+    url = (f"{ARCHIVE_URL}?latitude={lat}&longitude={lng}"
+           f"&start_date={start}&end_date={capped.isoformat()}"
+           "&daily=temperature_2m_max,temperature_2m_min,precipitation_sum"
+           "&timezone=Asia%2FKarachi")
+    req = urllib.request.Request(url, headers={"User-Agent": "smart-agriculture-fyp/0.1"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        d = json.loads(r.read().decode())["daily"]
+
+    out = summarise_daily(d["temperature_2m_max"], d["temperature_2m_min"],
+                          d["precipitation_sum"])
+    total = (end_d - date.fromisoformat(start)).days + 1
+    have = (capped - date.fromisoformat(start)).days + 1
+    out["complete"] = capped >= end_d
+    out["days_covered"] = have
+    out["days_in_window"] = total
+    return out
 
 # Every stage name in data/crop_stages.csv, mapped to how the crop responds to
 # stress while it is in that stage. Exact names rather than keyword matching:

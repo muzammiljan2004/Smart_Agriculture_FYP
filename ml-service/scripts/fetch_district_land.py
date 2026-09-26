@@ -35,7 +35,8 @@ from pathlib import Path
 
 from app.crops import season_window
 from app.gee import DistrictNotFound, get_district_geometry, init
-from app.land import FROST_C, SOIL_LAYERS, ROOT_ZONE_BANDS, TEXTURE_ASSET, SOIL_SCALE
+from app.land import SOIL_LAYERS, ROOT_ZONE_BANDS, TEXTURE_ASSET, SOIL_SCALE
+from app.weather import HOT_DAY_C, summarise_daily  # noqa: F401  (HOT_DAY_C documented below)
 
 DATA = Path(__file__).resolve().parents[1] / "data"
 TRAIN_CSV = DATA / "training_data_real.csv"
@@ -52,10 +53,8 @@ WEATHER_FIELDS = ["district", "season", "crop_type", "start", "end",
                   "tmax_mean_c", "tmin_mean_c", "tmax_peak_c",
                   "rain_mm", "frost_days", "hot_days_35c"]
 
-# Reported as a count of days above a fixed line rather than only a mean,
-# because a mean hides the thing that actually destroys a wheat crop: a short
-# spike during grain filling. March 2022 was not a warm season on average.
-HOT_DAY_C = 35.0
+# HOT_DAY_C and the rest of the aggregation now live in app/weather.py, so
+# inference computes these columns the same way this script does.
 
 
 def training_rows():
@@ -141,19 +140,12 @@ def window_weather(lat, lng, start, end):
                 raise
             time.sleep(2 ** attempt)
 
-    tmax = [v for v in d["temperature_2m_max"] if v is not None]
-    tmin = [v for v in d["temperature_2m_min"] if v is not None]
-    rain = [v for v in d["precipitation_sum"] if v is not None]
-    if not tmax:
-        raise LookupError(f"no weather for {start}..{end}")
-    return {
-        "tmax_mean_c": round(sum(tmax) / len(tmax), 3),
-        "tmin_mean_c": round(sum(tmin) / len(tmin), 3),
-        "tmax_peak_c": round(max(tmax), 2),
-        "rain_mm": round(sum(rain), 1),
-        "frost_days": sum(1 for v in tmin if v < FROST_C),
-        "hot_days_35c": sum(1 for v in tmax if v > HOT_DAY_C),
-    }
+    # Shared with inference on purpose -- app/main.py builds its model row
+    # through this same function. Duplicating the arithmetic here would be
+    # textbook train/serve skew: both sides look correct in isolation while
+    # the model scores against a differently-computed feature.
+    return summarise_daily(d["temperature_2m_max"], d["temperature_2m_min"],
+                           d["precipitation_sum"])
 
 
 def district_centroid(district):

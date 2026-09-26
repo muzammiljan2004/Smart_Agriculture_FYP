@@ -130,8 +130,104 @@ class Prediction(BaseModel):
     feature_date: str | None = None
 
 
-def predict(f: Features) -> Prediction:
-    """Shared by POST /predict and GET /farms/{id}/predict."""
+def model_extras(farm_row: dict) -> dict:
+    """Soil and season weather for the wider model, or {} for the base one.
+
+    Skipped entirely when the loaded bundle asks for nothing beyond indices
+    and crop, so the base model costs no extra work and, more to the point, no
+    Open-Meteo round trip per prediction.
+
+    Never raises. A missing value is left out and build_vector refuses on it
+    there, with a message naming the feature -- which is a far better failure
+    than a soil lookup taking down a prediction the base model could have
+    served from indices alone.
+    """
+    wanted = set(_bundle["feature_names"])
+    if not wanted - set(INDEX_FEATURES) - {f"crop_{c}" for c in CROPS}:
+        return {}
+
+    out = {}
+    try:
+        out.update(land_profile_for(farm_row)["soil"])
+    except Exception as e:
+        print(f"[predict] soil unavailable for farm {farm_row.get('id')}: {e}")
+
+    try:
+        from app.crops import season_window
+        from app.weather import season_weather
+
+        season = current_season(farm_row["crop_type"])
+        start, end = season_window(farm_row["crop_type"], season)
+        wx = season_weather(farm_row["gps_lat"], farm_row["gps_lng"], start, end)
+        if not wx["complete"]:
+            # Cumulative features (rain_mm, hot_days_35c) scale with elapsed
+            # days, so a half-run season reads as a dry, mild one. The model
+            # was trained on finished seasons and cannot know the difference.
+            print(f"[predict] season {season} is {wx['days_covered']}/"
+                  f"{wx['days_in_window']} days in; weather features are partial")
+        out.update(wx)
+    except Exception as e:
+        print(f"[predict] season weather unavailable for farm {farm_row.get('id')}: {e}")
+
+    return out
+
+
+def current_season(crop: str, today: date | None = None) -> str:
+    """The crop-year label ('2025-26') whose window the farm is in or nearest.
+
+    Anchored to the crop's own sowing month, not to January: a rabi crop sown
+    in November 2025 belongs to season 2025-26 for its whole life, including
+    the months of 2026 when it is actually growing.
+    """
+    from app.crops import SOW_WINDOW
+
+    today = today or date.today()
+    (sm, _sd), _ = SOW_WINDOW[crop]
+    y = today.year if today.month >= sm else today.year - 1
+    return f"{y}-{str(y + 1)[2:]}"
+
+
+def build_vector(f: Features, extra: dict | None = None) -> list[float]:
+    """Assemble the model's input row BY NAME, from the bundle's own schema.
+
+    The bundle records feature_names, so this reads them rather than
+    hardcoding a layout. That is what lets one code path serve both the
+    7-feature base model and the 19-feature soil+weather one: promoting a
+    wider model becomes a file swap, with no matching edit needed here.
+
+    Building positionally instead would be the silent-failure route. A forest
+    handed 19 numbers in the wrong order does not raise -- it returns a
+    confident wrong yield, and nothing downstream can tell.
+    """
+    extra = extra or {}
+    oh = dict(zip([f"crop_{c}" for c in CROPS], one_hot(f.crop_type)))
+    row = []
+    for name in _bundle["feature_names"]:
+        if name in oh:
+            row.append(oh[name])
+        elif hasattr(f, name):
+            row.append(getattr(f, name))
+        elif name in extra and extra[name] is not None:
+            row.append(float(extra[name]))
+        else:
+            # Refuse rather than substitute. A zero for ph or rain_mm is not a
+            # neutral value -- it is a specific, impossible soil, and the
+            # forest would answer for that soil without complaint.
+            raise HTTPException(
+                503,
+                f"model needs feature {name!r} and it is not available for this "
+                f"farm. Model expects {_bundle['feature_names']}.",
+            )
+    return row
+
+
+def predict(f: Features, extra: dict | None = None) -> Prediction:
+    """Shared by POST /predict and GET /farms/{id}/predict.
+
+    `extra` carries soil and season-weather values for models trained with
+    them; the base model ignores it, because build_vector only asks for what
+    the loaded bundle actually declares.
+    """
     if f.crop_type not in CROPS:
         raise HTTPException(400, f"unknown crop {f.crop_type!r}; expected one of {list(CROPS)}")
 
@@ -147,7 +243,7 @@ def predict(f: Features) -> Prediction:
             f"data/training.csv with PBS yields and re-run python -m app.train.",
         )
 
-    x = np.array([[getattr(f, name) for name in INDEX_FEATURES] + one_hot(f.crop_type)])
+    x = np.array([build_vector(f, extra)])
 
     # Spread across the trees as the interval. ponytail: this is model
     # disagreement, not a calibrated prediction interval -- it ignores the
@@ -348,7 +444,8 @@ def predict_for_farm(farm_id: str, user_id: str = Depends(current_user_id)):
         raise HTTPException(422, f"incomplete indices for {row['date']}: {row}")
 
     result = predict(
-        Features(crop_type=farm_row["crop_type"], **{k: row[k] for k in INDEX_FEATURES})
+        Features(crop_type=farm_row["crop_type"], **{k: row[k] for k in INDEX_FEATURES}),
+        extra=model_extras(farm_row),
     )
     result.features = {k: row[k] for k in INDEX_FEATURES}
     result.feature_date = row["date"]

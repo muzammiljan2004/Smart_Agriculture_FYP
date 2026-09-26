@@ -46,6 +46,21 @@ SOIL_FEATURES = ["ph", "clay_pct", "silt_pct", "sand_pct", "bulk_dens", "water_3
 WEATHER_FEATURES = ["tmax_mean_c", "tmin_mean_c", "tmax_peak_c",
                     "rain_mm", "frost_days", "hot_days_35c"]
 
+
+def feature_names(use_soil, use_weather):
+    """Column names for the variant actually being trained.
+
+    Mirrors load()'s assembly order exactly -- idx + one_hot + soil + weather
+    -- because app/main.py builds its inference vector by looking each of
+    these names up in turn. A mismatch does not raise: a forest accepts 19
+    numbers in the wrong order quite happily and returns a confident wrong
+    yield. The saved bundle previously recorded the base 7 names for every
+    variant, so a soil+weather model would have been unpromotable.
+    """
+    return (list(FEATURE_NAMES)
+            + (SOIL_FEATURES if use_soil else [])
+            + (WEATHER_FEATURES if use_weather else []))
+
 DATA = Path(__file__).resolve().parents[1] / "data"
 REAL_CSV = DATA / "training_data_real.csv"
 SOIL_CSV = DATA / "district_soil.csv"
@@ -376,7 +391,8 @@ def main():
         print(f"\n  Below the literature-based 0.78-0.84 expectation. Reported as computed;"
               f"\n  no tuning applied to reach a target number.")
 
-    print("\nimportances:", dict(zip(FEATURE_NAMES, rf.feature_importances_.round(3))))
+    names = feature_names(args.soil, args.weather)
+    print("\nimportances:", dict(zip(names, rf.feature_importances_.round(3))))
 
     if args.no_save:
         print("\n--no-save: model.pkl untouched")
@@ -394,7 +410,7 @@ def main():
 
     joblib.dump({
         "model": rf,
-        "feature_names": FEATURE_NAMES,
+        "feature_names": names,
         # Read off the data, not hardcoded: app/main.py refuses any crop not
         # in this list, so it must reflect what was actually trained on.
         "trained_crops": sorted({c for c, t in zip(crops, is_test) if not t}),
