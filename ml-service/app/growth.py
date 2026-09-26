@@ -13,6 +13,43 @@ from datetime import date, timedelta
 from app.crops import DEFAULT_SOWING, DURATION_DAYS, STAGES, harvest_style  # noqa: F401
 
 
+# Days past the expected harvest date before a crop stops being "late" and
+# starts being "gone". A single-cut crop is off the field within ~10 days;
+# 30 allows for a farmer who sowed later than the calendar assumes without
+# ever claiming a crop is standing half a year after it ripened.
+HARVEST_GRACE_DAYS = 30
+
+
+def season_state(crop_type: str, days_since_sowing: int, estimated: bool) -> str:
+    """'not_yet_sown' | 'growing' | 'overdue' | 'complete'.
+
+    WHY 'complete' EXISTS. Without it, a rabi crop asked about in September
+    reports as 166 days overdue -- because default_sowing_date() returns the
+    most recent conventional sowing date ON OR BEFORE today, which between
+    seasons is LAST season's. The arithmetic is right and the meaning is
+    nonsense: nobody's wheat is five months late, that season ended.
+
+    Nothing here observes a harvest. The system has no 'I harvested' input and
+    does not check imagery for a cleared field, so this is an inference from
+    the calendar alone. 'complete' says the season is over, not that the
+    farmer definitely cut it -- which is the strongest claim the data
+    supports.
+
+    An ESTIMATED sowing date past harvest is always 'complete': we invented
+    the date from the season, so treating it as a real crop running late would
+    be compounding a guess. A date the farmer actually entered gets the grace
+    period, because there it is their claim, not ours.
+    """
+    if days_since_sowing < 0:
+        return "not_yet_sown"
+    overrun = days_since_sowing - DURATION_DAYS[crop_type]
+    if overrun <= 0:
+        return "growing"
+    if estimated or overrun > HARVEST_GRACE_DAYS:
+        return "complete"
+    return "overdue"
+
+
 def harvest_window(crop_type: str, sown: date) -> dict:
     """When this crop comes off the field.
 
@@ -69,6 +106,7 @@ def growth_stage(crop_type: str, planting_date: date | None, today: date | None 
             "next_stage": stages[0][0], "days_to_next_stage": -days,
             "progress_pct": 0.0, "stages": [s for s, _ in stages],
             "days_to_harvest": DURATION_DAYS[crop_type] - days,
+            "season_state": season_state(crop_type, days, estimated),
             **harvest_window(crop_type, sown),
         }
 
@@ -98,6 +136,7 @@ def growth_stage(crop_type: str, planting_date: date | None, today: date | None 
         # Negative once the crop is overdue -- that is information, not a bug:
         # a farmer past harvest date needs to be told so, not shown a zero.
         "days_to_harvest": DURATION_DAYS[crop_type] - days,
+        "season_state": season_state(crop_type, days, estimated),
         **harvest_window(crop_type, sown),
     }
 
@@ -146,5 +185,30 @@ if __name__ == "__main__":
     g = growth_stage("tomato", date(2025, 8, 25), today=d)
     assert g["harvest_style"] == "multi" and g["pick_interval_days"] == 7, g
     assert g["harvest_window_days"] is None, g
+
+    # --- season_state -------------------------------------------------------
+    # The case that prompted this: a rabi crop asked about in September. The
+    # default sowing date is LAST November, so the arithmetic says 166 days
+    # overdue. Nobody's wheat is five months late; that season ended.
+    g = growth_stage("wheat", None, today=date(2026, 9, 27))
+    assert g["planting_date_estimated"] and g["days_to_harvest"] < -100, g
+    assert g["season_state"] == "complete", g
+
+    # An estimated date past harvest is never "overdue": we invented the date,
+    # so calling the crop late would be compounding a guess.
+    g = growth_stage("wheat", None, today=date(2026, 4, 25))
+    assert g["season_state"] == "complete", g
+
+    # A date the farmer entered gets the grace period -- there, late is their
+    # claim rather than ours.
+    g = growth_stage("wheat", date(2025, 11, 15), today=date(2026, 4, 25))
+    assert g["season_state"] == "overdue", g          # 11 days past
+    g = growth_stage("wheat", date(2025, 11, 15), today=date(2026, 9, 27))
+    assert g["season_state"] == "complete", g         # 166 days past
+
+    g = growth_stage("wheat", date(2025, 12, 1), today=date(2026, 2, 1))
+    assert g["season_state"] == "growing", g
+    g = growth_stage("wheat", date(2026, 11, 15), today=date(2026, 9, 27))
+    assert g["season_state"] == "not_yet_sown", g
 
     print("growth self-check OK")

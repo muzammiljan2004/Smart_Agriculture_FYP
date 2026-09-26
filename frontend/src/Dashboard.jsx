@@ -79,35 +79,52 @@ const fmtDate = (iso) =>
     day: 'numeric', month: 'short', year: 'numeric',
   })
 
-/** Expected harvest. Overdue is shown as overdue, never clamped to "0 days". */
+/** Expected harvest, framed by where the season actually is.
+ *
+ * `complete` is the case worth having. Without it a rabi crop viewed in
+ * September reads "166 days overdue", because the sowing date defaults to the
+ * most recent conventional one, which between seasons is LAST season's. The
+ * arithmetic is right and the meaning is nonsense -- that crop came off the
+ * field months ago. Nothing here observes a harvest; the system has no
+ * "I harvested" input, so this says the season is over, not that the farmer
+ * definitely cut it.
+ */
 function HarvestLine({ g }) {
   const d = g.days_to_harvest
-  const overdue = d < 0
+  const state = g.season_state ?? (d < 0 ? 'overdue' : 'growing')
   // A picked crop has no single harvest date, so the first pick is labelled as
   // such -- calling it "harvest" would imply the season ends there.
   const label = g.harvest_style === 'multi' ? 'First pick' : 'Expected harvest'
+  const warn = state === 'overdue'
+  const done = state === 'complete'
 
   return (
     <div
       className={
         'mt-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 ' +
         'rounded-xl px-3 py-2.5 ring-1 ' +
-        (overdue
-          ? 'bg-wheat-300/20 ring-wheat-300/60'
-          : 'bg-leaf-50 ring-leaf-100')
+        (warn ? 'bg-wheat-300/20 ring-wheat-300/60'
+          : done ? 'bg-black/[0.03] ring-black/5'
+            : 'bg-leaf-50 ring-leaf-100')
       }
     >
       <span className="text-sm">
-        <span className="text-muted">{label} </span>
-        <span className="font-semibold text-leaf-800">{fmtDate(g.harvest_date)}</span>
+        <span className="text-muted">{done ? 'Season ended' : label} </span>
+        <span className={done ? 'font-semibold text-muted' : 'font-semibold text-leaf-800'}>
+          {fmtDate(g.harvest_date)}
+        </span>
       </span>
       <span className="tnum text-xs">
-        {overdue ? (
+        {done ? (
+          <span className="text-muted">
+            harvested or cleared · no crop currently tracked
+          </span>
+        ) : warn ? (
           <span className="font-semibold text-wheat-500">{-d} days overdue</span>
         ) : (
           <span className="text-muted">in {d} days</span>
         )}
-        {g.harvest_style === 'multi' && g.pick_interval_days && (
+        {!done && g.harvest_style === 'multi' && g.pick_interval_days && (
           <span className="text-muted"> · then every {g.pick_interval_days} days</span>
         )}
       </span>
