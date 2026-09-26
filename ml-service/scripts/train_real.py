@@ -28,6 +28,7 @@ import argparse
 import csv
 import shutil
 import sys
+from collections import Counter
 from pathlib import Path
 
 import joblib
@@ -89,9 +90,65 @@ def _index(path, keys):
         return {tuple(r[k] for k in keys): r for r in csv.DictReader(fh) if r.get(keys[0])}
 
 
-def load(use_soil=False, use_weather=False):
+def audit_crops(skip_crops=()):
+    """Refuse to train while the CSV holds crops the feature vector cannot see.
+
+    This used to be `skipped += 1; continue` inside the row loop -- a counter,
+    not a warning. The failure mode it allowed is the expensive one: with
+    CROPS = ('wheat','rice') and ten crops fetched, training completes, reports
+    success, prints a healthy R^2, and silently drops roughly 80% of the data.
+    Nothing in the output says which crops went missing, and the saved bundle's
+    trained_crops list is correct, so the model looks right while being built
+    from a fraction of what was gathered.
+
+    So the decision is forced up front, before a single row is read for
+    training: either give the crop a model_order in data/crops.csv and retrain
+    deliberately, or name it in --skip-crops and exclude it deliberately.
+    Both are explicit. Neither is the default.
+    """
+    counts = Counter()
+    with REAL_CSV.open(newline="", encoding="utf-8-sig") as fh:
+        for r in csv.DictReader(fh):
+            counts[(r.get("crop_type") or "wheat").strip()] += 1
+
+    unknown = {c: n for c, n in counts.items() if c not in CROPS and c not in skip_crops}
+    if not unknown:
+        return counts
+
+    lost = sum(unknown.values())
+    total = sum(counts.values())
+    lines = [
+        "",
+        "REFUSING TO TRAIN: the dataset holds crops the model cannot represent.",
+        "",
+        f"  {REAL_CSV.name} has {total} rows across {len(counts)} crops.",
+        f"  CROPS (the model's one-hot) covers only: {', '.join(CROPS)}",
+        f"  Training now would silently discard {lost} rows ({lost / total:.0%}).",
+        "",
+        "  Not in the feature vector:",
+    ]
+    for c, n in sorted(unknown.items(), key=lambda kv: -kv[1]):
+        lines.append(f"      {c:12s} {n:>5d} rows")
+    lines += [
+        "",
+        "  Choose, per crop:",
+        "    KEEP  set model_order in data/crops.csv, then retrain. This widens",
+        f"          the one-hot from {len(CROPS)} to {len(CROPS) + len(unknown)} and "
+        f"invalidates the current model.pkl.",
+        "    DROP  re-run with --skip-crops " + ",".join(sorted(unknown)),
+        "",
+    ]
+    sys.exit("\n".join(lines))
+
+
+def load(use_soil=False, use_weather=False, skip_crops=()):
     if not REAL_CSV.exists():
         sys.exit(f"missing {REAL_CSV}. Run: python -m scripts.build_training_dataset")
+
+    # Before anything is read for training. A run that gets this far has had
+    # every crop in the CSV either admitted to the feature vector or named for
+    # exclusion, on purpose.
+    audit_crops(skip_crops)
 
     soil_ix = _index(SOIL_CSV, ["district"]) if use_soil else {}
     wx_ix = _index(WEATHER_CSV, ["district", "season", "crop_type"]) if use_weather else {}
@@ -253,7 +310,7 @@ def evaluate(X, y, districts, seasons, crops, is_test, anomaly=False, label=""):
     }
 
 
-def ablation():
+def ablation(skip_crops=()):
     """Price each feature block separately, on the same rows and the same split.
 
     The ORDER of the columns is the point. cv_r2 flatters static per-district
@@ -270,10 +327,17 @@ def ablation():
         ("+ soil + weather",      True,  True,  False),
         ("+ both, anomaly target", True, True,  True),
     ]
+    # Audited once, up front. The per-variant `except SystemExit` below is
+    # there to skip variants whose soil/weather CSV is absent, and it would
+    # swallow the crop refusal too -- printing it as a SKIPPED line and then
+    # exiting 0, which is the exact silent-success this check exists to stop.
+    audit_crops(skip_crops)
+
     rows = []
     for label, soil, wx, anom in variants:
         try:
-            X, y, districts, seasons, crops = load(use_soil=soil, use_weather=wx)
+            X, y, districts, seasons, crops = load(use_soil=soil, use_weather=wx,
+                                                   skip_crops=skip_crops)
         except SystemExit as e:
             print(f"  {label:26s} SKIPPED -- {e}")
             continue
@@ -334,13 +398,20 @@ def main():
                     help="compare feature blocks; never saves")
     ap.add_argument("--soil", action="store_true", help="include district soil")
     ap.add_argument("--weather", action="store_true", help="include season weather")
+    ap.add_argument(
+        "--skip-crops", default="",
+        type=lambda s: tuple(c.strip() for c in s.split(",") if c.strip()),
+        help="comma-separated crops to EXCLUDE deliberately, e.g. potato,tomato. "
+             "Crops in the CSV that are neither in CROPS nor named here abort "
+             "the run rather than being dropped quietly.")
     args = ap.parse_args()
 
     if args.ablation:
-        ablation()
+        ablation(args.skip_crops)
         return
 
-    X, y, districts, seasons, crops = load(use_soil=args.soil, use_weather=args.weather)
+    X, y, districts, seasons, crops = load(use_soil=args.soil, use_weather=args.weather,
+                                           skip_crops=args.skip_crops)
     is_test = np.isin(seasons, list(TEST_SEASONS))
     X_tr, y_tr, d_tr = X[~is_test], y[~is_test], districts[~is_test]
     X_te, y_te = X[is_test], y[is_test]
