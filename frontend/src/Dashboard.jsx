@@ -74,6 +74,67 @@ function IndexBar({ name, value }) {
   )
 }
 
+const fmtDate = (iso) =>
+  new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'short', year: 'numeric',
+  })
+
+/** Expected harvest. Overdue is shown as overdue, never clamped to "0 days". */
+function HarvestLine({ g }) {
+  const d = g.days_to_harvest
+  const overdue = d < 0
+  // A picked crop has no single harvest date, so the first pick is labelled as
+  // such -- calling it "harvest" would imply the season ends there.
+  const label = g.harvest_style === 'multi' ? 'First pick' : 'Expected harvest'
+
+  return (
+    <div
+      className={
+        'mt-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 ' +
+        'rounded-xl px-3 py-2.5 ring-1 ' +
+        (overdue
+          ? 'bg-wheat-300/20 ring-wheat-300/60'
+          : 'bg-leaf-50 ring-leaf-100')
+      }
+    >
+      <span className="text-sm">
+        <span className="text-muted">{label} </span>
+        <span className="font-semibold text-leaf-800">{fmtDate(g.harvest_date)}</span>
+      </span>
+      <span className="tnum text-xs">
+        {overdue ? (
+          <span className="font-semibold text-wheat-500">{-d} days overdue</span>
+        ) : (
+          <span className="text-muted">in {d} days</span>
+        )}
+        {g.harvest_style === 'multi' && g.pick_interval_days && (
+          <span className="text-muted"> · then every {g.pick_interval_days} days</span>
+        )}
+      </span>
+    </div>
+  )
+}
+
+/** When to sow a recommended crop. "Grow maize" alone is not actionable. */
+function SowingLine({ s }) {
+  return (
+    <p className="mt-2 flex flex-wrap items-baseline gap-x-2 text-xs">
+      {s.open_now ? (
+        <span className="font-semibold text-leaf-700">Sow now</span>
+      ) : (
+        <span className="text-muted">
+          Sow from <span className="font-medium text-ink">{fmtDate(s.window_opens)}</span>
+          {' '}<span className="tnum">({s.days_until_window}d)</span>
+        </span>
+      )}
+      <span className="text-muted">
+        · window shuts {fmtDate(s.window_closes)} · harvest ~
+        {fmtDate(s.harvest_if_sown_now)}
+      </span>
+    </p>
+  )
+}
+
 /** Phenological stage track. Everything comes from the API's growth object. */
 function GrowthTracker({ g }) {
   const stages = g.stages ?? []
@@ -118,6 +179,8 @@ function GrowthTracker({ g }) {
           </li>
         ))}
       </ol>
+
+      {g.harvest_date && <HarvestLine g={g} />}
 
       <p className="mt-4 text-xs text-muted">
         Sown {g.planting_date}
@@ -210,6 +273,7 @@ function Suitability({ data, loading, error }) {
               {r.limitations?.map((l, i) => (
                 <p key={i} className="mt-1.5 text-xs text-wheat-500">! {l}</p>
               ))}
+              {r.sowing && <SowingLine s={r.sowing} />}
             </li>
           )
         })}

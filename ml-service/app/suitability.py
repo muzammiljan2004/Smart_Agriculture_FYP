@@ -237,6 +237,48 @@ def assess_crop(crop, profile, last_crop=None, area_index=None, district=None):
         "rotation": {"effect": effect, "reason": reason},
         "window_climate": wc,
         "thresholds_status": req["status"],
+        # "Grow maize" is not actionable on its own -- the farmer needs to know
+        # when the window opens, when it shuts, and when it will come off.
+        "sowing": sowing_advice(crop),
+    }
+
+
+def sowing_advice(crop, today=None):
+    """Next sowing window for this crop, and what it implies for harvest.
+
+    Dates are resolved to real calendar dates rather than returned as (month,
+    day), because the window may be in this year or the next and the caller
+    cannot tell which. Asked in December about a rabi crop whose window shut in
+    November, the honest answer is next November, not eleven months ago.
+    """
+    from datetime import date, timedelta
+
+    from app.crops import DURATION_DAYS, SOW_WINDOW
+
+    today = today or date.today()
+    (sm, sd), (em, ed) = SOW_WINDOW[crop]
+
+    def resolve(m, d, after):
+        c = date(after.year, m, d)
+        return c if c >= after else date(after.year + 1, m, d)
+
+    opens = resolve(sm, sd, today)
+    closes = resolve(em, ed, opens)      # anchored to opens, so it wraps the new year
+    # Mid-window today: the farmer can sow now, so do not push them to next year.
+    prev_open = date(opens.year - 1, sm, sd)
+    prev_close = resolve(em, ed, prev_open)
+    if prev_open <= today <= prev_close:
+        opens, closes = prev_open, prev_close
+
+    return {
+        "window_opens": opens.isoformat(),
+        "window_closes": closes.isoformat(),
+        "open_now": opens <= today <= closes,
+        "days_until_window": max(0, (opens - today).days),
+        "duration_days": DURATION_DAYS[crop],
+        "harvest_if_sown_now": (
+            (max(today, opens) + timedelta(days=DURATION_DAYS[crop])).isoformat()
+        ),
     }
 
 
@@ -360,6 +402,31 @@ def _self_check():
     # Maximum limitation, not average: one ruinous factor must decide.
     assert _worst(["S1", "S1", "N"]) == "N"
     assert _worst(["S1", "S2"]) == "S2"
+    # --- sowing windows ----------------------------------------------------
+    from datetime import date as _date
+
+    # Asked in late September, wheat's November window is still ahead.
+    s = sowing_advice("wheat", today=_date(2026, 9, 26))
+    assert s["window_opens"] == "2026-11-01" and not s["open_now"], s
+    assert s["days_until_window"] == 36, s
+
+    # Asked mid-window, the answer is "now" -- not next year's window.
+    s = sowing_advice("wheat", today=_date(2026, 11, 20))
+    assert s["open_now"] and s["days_until_window"] == 0, s
+    assert s["window_opens"] == "2026-11-01", s
+
+    # Asked just after it shut, the honest answer is next year, not 11
+    # months ago. This is the case the naive resolve() gets wrong.
+    s = sowing_advice("wheat", today=_date(2026, 12, 20))
+    assert s["window_opens"] == "2027-11-01", s
+
+    # Rice's window sits inside one calendar year; wheat's does not. Both must
+    # come back with closes AFTER opens.
+    for c in ("wheat", "rice", "sugarcane", "potato"):
+        s = sowing_advice(c, today=_date(2026, 9, 26))
+        assert s["window_closes"] > s["window_opens"], (c, s)
+        assert s["harvest_if_sown_now"] > s["window_opens"], (c, s)
+
     print("suitability self-check OK")
 
 
