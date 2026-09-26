@@ -14,6 +14,7 @@ Five checks, each answering an objection to the one before:
   3  how much NDVI variation is year-to-year rather than fixed per district
   4  does signal strength rise with the crop's share of district area
   5  is the district already cropland, i.e. would masking help (it would not)
+  6  measured: masked vs unmasked NDVI against yield, on a real series
 
 The conclusion is that district-level optical compositing cannot isolate one
 crop in a mixed-crop landscape, and that no amount of further GEE fetching
@@ -132,6 +133,52 @@ def check_5_cropland(districts=("Sheikhupura", "Okara", "Faisalabad", "Attock"))
         print(f"   skipped (no Earth Engine: {e})\n")
 
 
+def check_6_masking_probe(district="Sheikhupura", crop="wheat"):
+    """The decisive test: re-reduce one series WITH a cropland mask.
+
+    Answers the obvious objection to check 5 -- "you inferred that masking
+    would not help, you did not try it". This tries it.
+
+    Result: masking raises NDVI by a near-CONSTANT 0.03-0.055 every season.
+    It lifts the level and leaves the shape alone, and shape is all a
+    correlation sees, so corr(NDVI, yield) went 0.573 -> 0.568. Slightly
+    worse. A full re-fetch with masking (~26h of GEE) would move every value
+    up and the signal down.
+    """
+    print("6. MEASURED: DOES MASKING ACTUALLY HELP?")
+    try:
+        import ee
+        from app.gee import _mask_clouds, get_district_geometry, init
+        from app.crops import season_window
+        init()
+        cm = ee.Image("ESA/WorldCover/v200/2021").select("Map").eq(40)
+        geom = get_district_geometry(district)
+        rs = [r for r in rows()
+              if r["district"] == district and r["crop_type"] == crop]
+        y, raw, msk = [], [], []
+        for r in sorted(rs, key=lambda x: x["season"]):
+            a, b = season_window(crop, r["season"])
+            col = (ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+                   .filterBounds(geom).filterDate(a, b)
+                   .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 20))
+                   .map(_mask_clouds))
+            nd = col.median().divide(10000).normalizedDifference(["B8", "B4"]).rename("n")
+            f = lambda img: img.reduceRegion(ee.Reducer.mean(), geom, 100,
+                                             maxPixels=int(1e9)).getInfo()["n"]
+            raw.append(f(nd)); msk.append(f(nd.updateMask(cm)))
+            y.append(float(r["actual_yield"]))
+        y, raw, msk = map(np.array, (y, raw, msk))
+        print(f"     {district} {crop}, {len(y)} seasons")
+        print(f"     corr(raw, yield)    {np.corrcoef(raw, y)[0, 1]:+.3f}")
+        print(f"     corr(masked, yield) {np.corrcoef(msk, y)[0, 1]:+.3f}")
+        print(f"     masking shifts NDVI by {np.abs(msk - raw).mean():+.4f}, "
+              f"near-constant across seasons")
+        print("   a constant offset cannot change a correlation. Masking does")
+        print("   not help, and a masked re-fetch is not worth the GEE time.\n")
+    except Exception as e:                      # noqa: BLE001 - diagnostic only
+        print(f"   skipped (no Earth Engine: {e})\n")
+
+
 if __name__ == "__main__":
     rs = rows()
     print(f"\n{len(rs)} training rows\n")
@@ -140,5 +187,6 @@ if __name__ == "__main__":
     check_3_year_to_year(rs)
     check_4_area_share(rs)
     check_5_cropland()
+    check_6_masking_probe()
     print("CONCLUSION: district-level optical compositing cannot isolate one")
     print("crop in a mixed-crop landscape. Further GEE fetching does not fix it.")

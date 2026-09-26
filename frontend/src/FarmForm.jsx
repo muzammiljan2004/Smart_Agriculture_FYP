@@ -1,14 +1,50 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 
-// Must match DISTRICTS in ml-service/app/districts.py and the CHECK constraint
-// in the migration. Centres are the district towns -- used to reposition the
-// coordinate inputs when the district changes, so the map does not open on the
-// wrong side of Punjab.
+// All 34 Punjab districts the pipeline has data for. Must match the CHECK in
+// supabase/migrations/20260927020000_all_punjab_districts.sql, which is itself
+// generated from data/district_soil.csv -- so this list cannot drift ahead of
+// the districts the suitability engine can actually assess.
+//
+// Centres are GAUL polygon CENTROIDS, not district towns. The centroid is what
+// the satellite pipeline reduces over, so the coordinate inputs open on the
+// same place the imagery describes. A town centre would drop the default pin
+// on rooftops, which is the one land cover the model has nothing to say about.
 export const DISTRICTS = {
-  Sheikhupura: { lat: '31.7131', lng: '73.9783' },
-  Okara: { lat: '30.8103', lng: '73.4459' },
-  Sahiwal: { lat: '30.6682', lng: '73.1114' },
+  Attock: { lat: '33.4914', lng: '72.3060' },
+  Bahawalnagar: { lat: '29.6087', lng: '73.0159' },
+  Bahawalpur: { lat: '28.8295', lng: '71.7234' },
+  Bhakkar: { lat: '31.6517', lng: '71.4221' },
+  Chakwal: { lat: '32.9001', lng: '72.5321' },
+  'Dera Ghazi Khan': { lat: '30.4141', lng: '70.4417' },
+  Faisalabad: { lat: '31.2387', lng: '73.1479' },
+  Gujranwala: { lat: '32.1398', lng: '74.0896' },
+  Gujrat: { lat: '32.7228', lng: '73.9927' },
+  Hafizabad: { lat: '32.0267', lng: '73.5032' },
+  Jhang: { lat: '31.3178', lng: '72.3634' },
+  Jhelum: { lat: '32.8302', lng: '73.2927' },
+  Kasur: { lat: '31.0540', lng: '74.1582' },
+  Khanewal: { lat: '30.3696', lng: '72.0178' },
+  Khushab: { lat: '32.1897', lng: '72.1043' },
+  Lahore: { lat: '31.4663', lng: '74.3584' },
+  Layyah: { lat: '30.9726', lng: '71.2488' },
+  Lodhran: { lat: '29.6740', lng: '71.6892' },
+  'Mandi Bahauddin': { lat: '32.4359', lng: '73.4520' },
+  Mianwali: { lat: '32.6657', lng: '71.5334' },
+  Multan: { lat: '29.9386', lng: '71.4030' },
+  Muzaffargarh: { lat: '30.0513', lng: '71.0374' },
+  Narowal: { lat: '32.2068', lng: '74.9945' },
+  Okara: { lat: '30.7087', lng: '73.6849' },
+  Pakpattan: { lat: '30.3018', lng: '73.2439' },
+  'Rahim Yar Khan': { lat: '28.4149', lng: '70.5345' },
+  Rajanpur: { lat: '29.1633', lng: '70.0406' },
+  Rawalpindi: { lat: '33.4654', lng: '73.1970' },
+  Sahiwal: { lat: '30.5485', lng: '72.8939' },
+  Sargodha: { lat: '32.0959', lng: '72.7407' },
+  Sheikhupura: { lat: '31.6232', lng: '73.9154' },
+  Sialkot: { lat: '32.4114', lng: '74.5331' },
+  'Toba Tek Singh': { lat: '30.8789', lng: '72.5486' },
+  Vehari: { lat: '30.0106', lng: '72.4046' },
 }
 
 // Season is derived, not chosen: the DB has a CHECK that rejects any other
