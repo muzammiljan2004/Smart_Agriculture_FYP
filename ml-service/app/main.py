@@ -790,3 +790,30 @@ def confirm_harvest(farm_id: str, body: HarvestConfirm,
     }
     db().table("farms").update(patch).eq("id", farm_id).execute()
     return {"farm_id": farm_id, **patch}
+
+
+@app.get("/farms/{farm_id}/lifecycle")
+def farm_lifecycle(farm_id: str, refresh: bool = False,
+                   user_id: str = Depends(current_user_id)):
+    """Where this field is in its cycle, read from the curve.
+
+    Lifecycle stages 3, 6 and 7: the observed growth phase (and whether it
+    agrees with the crop calendar), whether the ground is fallow, and whether
+    a new crop has emerged since the last clearance.
+
+    Separate from /harvest on purpose. That endpoint answers "was this field
+    harvested, and when"; this one answers "what is it doing now". They read
+    the same stored series and neither refetches for the other.
+    """
+    from app.lifecycle import field_state
+
+    farm_row = owned_farm(farm_id, user_id)
+    if refresh:
+        farm_timeseries(farm_id, refresh=True, user_id=user_id)
+
+    sown, _, _ = _field_window(farm_row)
+    state = field_state(_stored_series(farm_id), farm_row["crop_type"], sown)
+    state["crop_type"] = farm_row["crop_type"]
+    state["sowing_date"] = sown.isoformat()
+    state["sowing_date_estimated"] = not farm_row.get("planting_date")
+    return state

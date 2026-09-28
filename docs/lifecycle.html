@@ -76,6 +76,7 @@
   .legend span{display:inline-flex; align-items:center; gap:7px;}
   .sw{width:22px; height:11px; border-radius:2px; border:1.5px solid;}
   .sw.b{background:var(--built-bg); border-color:var(--built);}
+  .sw.u{background:var(--built-bg); border-color:var(--needs); border-style:dashed;}
   .sw.r{background:var(--ready-bg); border-color:var(--ready);}
   .sw.n{background:var(--needs-bg); border-color:var(--needs); border-style:dashed;}
   .sw.x{background:var(--blocked-bg); border-color:var(--blocked);}
@@ -89,6 +90,8 @@
   .tag{font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:500;
     padding:2.5px 8px; border-radius:3px; border:1px solid; display:inline-block;}
   .tag.b{color:var(--built); background:var(--built-bg); border-color:var(--built);}
+  .tag.u{color:var(--needs); background:var(--built-bg); border-color:var(--needs);
+    border-style:dashed;}
   .tag.r{color:var(--ready); background:var(--ready-bg); border-color:var(--ready);}
   .tag.n{color:var(--needs); background:var(--needs-bg); border-color:var(--needs);}
   .tag.x{color:var(--blocked); background:var(--blocked-bg); border-color:var(--blocked);}
@@ -104,19 +107,20 @@
 <div class="wrap">
 
   <header>
-    <div class="eyebrow">Smart Agriculture · Punjab</div>
+    <div class="eyebrow">Smart Agriculture · Punjab · updated 28 Sep 2026</div>
     <h1>From a one-shot pipeline to a closed loop</h1>
-    <p class="lede">What the system does today, what the autonomous version does instead,
-      and the one stage that cannot come along.</p>
+    <p class="lede">Half the loop is now built and running on real imagery. What remains is
+      one stage that cannot come along, and one measurement nobody has taken yet.</p>
   </header>
 
   <hr>
 
   <section>
-    <h2>Today: one measurement, one answer</h2>
-    <p>The farmer names the crop, the pipeline takes a single satellite composite over the
-      whole district, and a calendar fills in everything that happens afterwards. Nothing
-      looks at the field again.</p>
+    <h2>Where we started: one measurement, one answer</h2>
+    <p>The farmer named the crop, the pipeline took a single satellite composite over the
+      whole district, and a calendar filled in everything afterwards. Nothing looked at the
+      field again. This is the baseline the next figure replaces — it is kept here because
+      the yield half of it is still exactly this.</p>
 
     <figure>
       <svg viewBox="0 0 900 250" role="img" aria-label="Linear pipeline: the farmer enters a crop and a point, one seasonal district composite produces five indices and a yield number, while a calendar separately produces growth stage and harvest date.">
@@ -188,12 +192,14 @@
   <hr>
 
   <section>
-    <h2>The target: a loop that re-enters itself</h2>
-    <p>The same field is re-observed every five days. Each stage hands to the next, and
-      after harvest the loop returns to monitoring instead of ending.</p>
+    <h2>The loop: five of eight stages now run</h2>
+    <p>The same field is re-observed from both sensors. Each stage hands to the next, and
+      after harvest the loop returns to monitoring instead of ending. Green boxes execute
+      today against real Sentinel-2 and Sentinel-1 data.</p>
 
     <div class="legend">
-      <span><i class="sw b"></i> built today</span>
+      <span><i class="sw b"></i> built and running</span>
+      <span><i class="sw u"></i> built, not yet validated</span>
       <span><i class="sw r"></i> buildable now</span>
       <span><i class="sw n"></i> needs data we lack</span>
       <span><i class="sw x"></i> not obtainable</span>
@@ -208,25 +214,25 @@
         </defs>
         <g font-family="IBM Plex Mono, monospace" font-size="11.5" fill="currentColor">
 
-          <rect x="10" y="44" width="186" height="62" rx="3" fill="var(--needs-bg)" stroke="var(--needs)" stroke-width="1.5" stroke-dasharray="5 3"/>
+          <rect x="10" y="44" width="186" height="62" rx="3" fill="var(--built-bg)" stroke="var(--built)" stroke-width="1.5"/>
           <text x="103" y="68" text-anchor="middle" font-weight="600">1 · Register field</text>
-          <text x="103" y="84" text-anchor="middle" fill="var(--muted)">polygon, not a point</text>
-          <text x="103" y="98" text-anchor="middle" fill="var(--muted)">crop named once</text>
+          <text x="103" y="84" text-anchor="middle" fill="var(--muted)">point + area → circle</text>
+          <text x="103" y="98" text-anchor="middle" fill="var(--muted)">polygon is the upgrade</text>
 
-          <rect x="248" y="44" width="186" height="62" rx="3" fill="var(--ready-bg)" stroke="var(--ready)" stroke-width="1.5"/>
+          <rect x="248" y="44" width="186" height="62" rx="3" fill="var(--built-bg)" stroke="var(--built)" stroke-width="1.5"/>
           <text x="341" y="68" text-anchor="middle" font-weight="600">2 · Monitor</text>
-          <text x="341" y="84" text-anchor="middle" fill="var(--muted)">S2 every 5 days</text>
-          <text x="341" y="98" text-anchor="middle" fill="var(--muted)">time series per field</text>
+          <text x="341" y="84" text-anchor="middle" fill="var(--muted)">S2 + S1 per field</text>
+          <text x="341" y="98" text-anchor="middle" fill="var(--muted)">33–57 obs / season</text>
 
           <rect x="486" y="44" width="186" height="62" rx="3" fill="var(--ready-bg)" stroke="var(--ready)" stroke-width="1.5"/>
           <text x="579" y="68" text-anchor="middle" font-weight="600">3 · Growth</text>
-          <text x="579" y="84" text-anchor="middle" fill="var(--muted)">stage from the curve,</text>
-          <text x="579" y="98" text-anchor="middle" fill="var(--muted)">not the calendar</text>
+          <text x="579" y="84" text-anchor="middle" fill="var(--muted)">still calendar-based —</text>
+          <text x="579" y="98" text-anchor="middle" fill="var(--muted)">curve not wired in yet</text>
 
-          <rect x="724" y="44" width="166" height="62" rx="3" fill="var(--ready-bg)" stroke="var(--ready)" stroke-width="1.5"/>
+          <rect x="724" y="44" width="166" height="62" rx="3" fill="var(--built-bg)" stroke="var(--built)" stroke-width="1.5"/>
           <text x="807" y="68" text-anchor="middle" font-weight="600">4 · Maturity</text>
-          <text x="807" y="84" text-anchor="middle" fill="var(--muted)">sustained decline</text>
-          <text x="807" y="98" text-anchor="middle" fill="var(--muted)">from peak</text>
+          <text x="807" y="84" text-anchor="middle" fill="var(--muted)">peak found on the</text>
+          <text x="807" y="98" text-anchor="middle" fill="var(--muted)">curve, no calendar</text>
 
           <line x1="198" y1="75" x2="244" y2="75" stroke="currentColor" stroke-width="1.4" marker-end="url(#a2)"/>
           <line x1="436" y1="75" x2="482" y2="75" stroke="currentColor" stroke-width="1.4" marker-end="url(#a2)"/>
@@ -235,20 +241,21 @@
           <path d="M807 108 L807 150" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#a2)"/>
           <text x="815" y="133" fill="var(--muted)" font-size="10.5">enters window</text>
 
-          <rect x="724" y="188" width="166" height="62" rx="3" fill="var(--ready-bg)" stroke="var(--ready)" stroke-width="1.5"/>
-          <text x="807" y="212" text-anchor="middle" font-weight="600">5 · Harvest</text>
-          <text x="807" y="228" text-anchor="middle" fill="var(--muted)">NDVI 0.50 → 0.15,</text>
-          <text x="807" y="242" text-anchor="middle" fill="var(--muted)">2 observations</text>
+          <rect x="724" y="188" width="166" height="62" rx="3" fill="var(--built-bg)" stroke="var(--needs)" stroke-width="1.8" stroke-dasharray="5 3"/>
+          <text x="807" y="208" text-anchor="middle" font-weight="600">5 · Harvest</text>
+          <text x="807" y="223" text-anchor="middle" fill="var(--muted)">sustained decline +</text>
+          <text x="807" y="236" text-anchor="middle" fill="var(--muted)">radar, evidence score</text>
+          <text x="807" y="248" text-anchor="middle" fill="var(--needs)" font-size="10">NOT YET VALIDATED</text>
 
           <rect x="486" y="188" width="186" height="62" rx="3" fill="var(--ready-bg)" stroke="var(--ready)" stroke-width="1.5"/>
           <text x="579" y="212" text-anchor="middle" font-weight="600">6 · Fallow</text>
-          <text x="579" y="228" text-anchor="middle" fill="var(--muted)">flat, low, bare soil</text>
-          <text x="579" y="242" text-anchor="middle" fill="var(--muted)">advice fires here</text>
+          <text x="579" y="228" text-anchor="middle" fill="var(--muted)">post_harvest exists;</text>
+          <text x="579" y="242" text-anchor="middle" fill="var(--muted)">advice not wired yet</text>
 
           <rect x="248" y="188" width="186" height="62" rx="3" fill="var(--ready-bg)" stroke="var(--ready)" stroke-width="1.5"/>
           <text x="341" y="212" text-anchor="middle" font-weight="600">7 · Emergence</text>
-          <text x="341" y="228" text-anchor="middle" fill="var(--muted)">the cliff, inverted</text>
-          <text x="341" y="242" text-anchor="middle" fill="var(--muted)">new cycle starts</text>
+          <text x="341" y="228" text-anchor="middle" fill="var(--muted)">2nd cycle already</text>
+          <text x="341" y="242" text-anchor="middle" fill="var(--muted)">found — not surfaced</text>
 
           <rect x="10" y="188" width="186" height="62" rx="3" fill="var(--needs-bg)" stroke="var(--needs)" stroke-width="1.5" stroke-dasharray="5 3"/>
           <text x="103" y="212" text-anchor="middle" font-weight="600">8 · Identify crop</text>
@@ -262,14 +269,17 @@
           <path d="M103 252 L103 316 L341 316 L341 110" stroke="var(--ready)" stroke-width="1.8" fill="none" marker-end="url(#a2)"/>
           <text x="222" y="334" text-anchor="middle" fill="var(--ready)" font-size="11" font-weight="600">loop re-enters — farmer says nothing</text>
 
-          <path d="M103 188 L103 130" stroke="var(--needs)" stroke-width="1.4" fill="none" stroke-dasharray="4 3" marker-end="url(#a2)"/>
-          <text x="96" y="150" text-anchor="end" fill="var(--needs)" font-size="10.5">confirm ⇒ a labelled field</text>
+          <path d="M103 188 L103 130" stroke="var(--built)" stroke-width="1.6" fill="none" marker-end="url(#a2)"/>
+          <text x="96" y="146" text-anchor="end" fill="var(--built)" font-size="10.5">confirm ⇒ a labelled field</text>
+          <text x="96" y="160" text-anchor="end" fill="var(--muted)" font-size="10">endpoint built, 0 rows so far</text>
         </g>
       </svg>
-      <figcaption>Stages 2 through 7 need pipeline work and no new data. Stage 1 waits on
-        field boundaries; stage 8 waits on labels — and the dashed arrow is where those
-        labels come from, since every confirmation is a labelled field-season that makes
-        the next identification better.</figcaption>
+      <figcaption>Stages 1, 2, 4 and 5 run today against real imagery; 3, 6 and 7 are
+        pipeline work against data already on disk. Stage 5 is drawn green-with-dashes on
+        purpose: the code executes and returns dates with evidence, but not one of those
+        dates has ever been checked against a real harvest. The confirmation arrow is now
+        a working endpoint — it has simply never been called, which is the same bottleneck
+        seen from the other end.</figcaption>
     </figure>
   </section>
 
@@ -360,20 +370,22 @@
           <tr><th>Stage</th><th>Status</th><th>What stands in the way</th></tr>
         </thead>
         <tbody>
-          <tr><td class="s">Field registration</td><td class="s"><span class="tag n">needs data</span></td>
-            <td>Stores <code>gps_lat/lng</code> — a point. Needs a polygon; PostGIS is already installed and unused.</td></tr>
-          <tr><td class="s">Per-field time series</td><td class="s"><span class="tag r">buildable now</span></td>
-            <td><code>satellite_features</code> is already keyed on <code>(farm_id, date)</code>, and <code>fetch_indices</code> already accepts a geometry. Needs a scheduler.</td></tr>
+          <tr><td class="s">Field registration</td><td class="s"><span class="tag b">built</span></td>
+            <td><code>area_hectares</code> added; a point plus an area becomes a circle of the right size. A polygon would be better and is not required — PostGIS remains installed and unused.</td></tr>
+          <tr><td class="s">Per-field time series</td><td class="s"><span class="tag b">built</span></td>
+            <td><code>app/field.py</code> + <code>GET /farms/{id}/timeseries</code>. Both sensors, one round trip, 2.6–7.6 s per field. 323 observations stored across 5 development farms. Still manual — no scheduler.</td></tr>
           <tr><td class="s">Growth stage</td><td class="s"><span class="tag b">built</span> <span class="tag r">improvable</span></td>
-            <td>Calendar-only today. The NDVI curve would show a cold spell delaying tillering; the calendar cannot.</td></tr>
-          <tr><td class="s">Maturity</td><td class="s"><span class="tag r">buildable now</span></td>
-            <td>Sustained decline from peak. No new data.</td></tr>
-          <tr><td class="s">Harvest detection</td><td class="s"><span class="tag r">buildable now</span></td>
-            <td>Algorithm is straightforward; <em>validating</em> it needs 20–30 real harvest dates, which do not exist yet.</td></tr>
+            <td>Unchanged and still calendar-only. The curve now exists to replace it; nothing has been wired across.</td></tr>
+          <tr><td class="s">Maturity</td><td class="s"><span class="tag b">built</span></td>
+            <td>Peak located on the smoothed curve with no calendar input at all.</td></tr>
+          <tr><td class="s">Harvest detection</td><td class="s"><span class="tag u">built, unvalidated</span></td>
+            <td>Multi-cycle detection with radar corroboration and an evidence score. Returns dates on real fields. <em>Zero</em> of them checked against a real harvest — the score is an evidence tally, never a probability.</td></tr>
           <tr><td class="s">Fallow · emergence</td><td class="s"><span class="tag r">buildable now</span></td>
-            <td>Same mechanism as harvest, inverted.</td></tr>
+            <td>Mostly done by accident: <code>find_cycles</code> already returns every cycle in a series, and a two-crop field resolves into two. They are not yet exposed as lifecycle states.</td></tr>
           <tr><td class="s">Crop identification</td><td class="s"><span class="tag n">needs data</span></td>
-            <td>No field-level labels. Wheat and barley share a window — their district composites correlated at 1.000. Group-level only.</td></tr>
+            <td>No field-level labels. Wheat and barley share a window — their district composites correlated at 1.000. Group-level only. WorldCereal is <em>not</em> in the GEE catalogue, confirmed by probe.</td></tr>
+          <tr><td class="s">Harvest confirmation</td><td class="s"><span class="tag b">built</span></td>
+            <td><code>POST /farms/{id}/harvest/confirm</code>, with a DB constraint refusing a confirmation without a date. Never called — 0 rows of ground truth exist.</td></tr>
           <tr><td class="s">Recommendations</td><td class="s"><span class="tag b">built</span></td>
             <td>Suitability, rotation rules and hazard alerts all exist and are unaffected by any of this.</td></tr>
           <tr><td class="s">Yield prediction</td><td class="s"><span class="tag x">not obtainable</span></td>
@@ -386,13 +398,26 @@
   <hr>
 
   <section>
-    <h2>What to find first</h2>
-    <p><strong>20–30 real harvest dates, to ±3 days.</strong> Nothing else is close. Without
-      them the headline feature is an untested claim; with them it is a measured result with
-      a detection rate and a mean lag. This is a week of phone calls, not a technical problem.</p>
-    <p><strong>Then field polygons</strong> for ten to twenty demo farms, each at least a
+    <h2>What to do next</h2>
+    <p><strong>1 · Collect 20–30 real harvest dates, to ±3 days.</strong> Still the only
+      blocker, and now the <em>sole</em> one: the detector is built, the validation script is
+      written, and both sit idle waiting for a CSV of
+      <code>field_id,actual_harvest_date</code>. Five rows is enough to print a first error
+      figure. This is a week of phone calls, not a technical problem.</p>
+    <p><strong>2 · Check the detector at population scale</strong> while collecting. Run the
+      existing pipeline over ~50 random cropland points in one district and plot when it says
+      they were cut. Central Punjab wheat comes off in mid-April; if the detected dates
+      cluster there, that is independent corroboration costing about five minutes of Earth
+      Engine and no farmer contact at all. It validates the population, never an individual
+      field — but it can still falsify the work, which is what makes it worth running.</p>
+    <p><strong>3 · Surface fallow and emergence.</strong> The cycles are already computed;
+      they need exposing as states. This closes the loop's return arrow and depends on no
+      new data.</p>
+    <p><strong>4 · Then field polygons</strong> for ten to twenty demo farms, each at least a
       hectare — below roughly half a hectare, edge pixels dominate the statistics.</p>
-    <p>Everything else in the loop is pipeline work against data already on disk.</p>
+    <p class="note"><strong>Not next:</strong> tuning detector thresholds. Every parameter in
+      it was set from five development farms that are not ground truth. Further tuning against
+      them is fitting the algorithm to its own test fixtures.</p>
   </section>
 
 </div>
