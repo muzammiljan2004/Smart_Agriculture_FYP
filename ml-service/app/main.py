@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from app import alerts, land, suitability
 from app.db import db
-from app.districts import CROPS, INDEX_FEATURES, one_hot
+from app.districts import CROPS, INDEX_FEATURES, one_hot, season_window
 
 # Below this many TRAINING rows, a crop's prediction carries a thin-data
 # caveat. 150 is a judgement call, not a derived threshold: it sits above the
@@ -161,7 +161,6 @@ def model_extras(farm_row: dict) -> dict:
         print(f"[predict] soil unavailable for farm {farm_row.get('id')}: {e}")
 
     try:
-        from app.crops import season_window
         from app.weather import season_weather
 
         season = current_season(farm_row["crop_type"])
@@ -270,46 +269,18 @@ def predict(f: Features, extra: dict | None = None) -> Prediction:
     )
 
 
-def borrow_district_features(farm_row) -> dict | None:
-    """Copy a same-district farm's latest indices onto this farm.
-
-    Legitimate only because indices are currently DISTRICT-level: fetch_indices
-    samples the district bounding box, not the farm, so every farm in a
-    district gets byte-identical values. Re-querying GEE per farm would spend
-    ~30s to recompute a number we already hold.
-
-    ponytail: DELETE THIS the moment per-farm geometry lands (the 500 m buffer
-    around farms.gps_*). At that point two farms in one district legitimately
-    differ, and copying would silently hand one farm another's readings --
-    which is far worse than the 404 this replaces.
-    """
-    peers = (
-        db().table("farms").select("id")
-        .eq("district", farm_row["district"])
-        .neq("id", farm_row["id"])
-        .execute()
-    )
-    ids = [p["id"] for p in (peers.data or [])]
-    if not ids:
-        return None
-
-    src = (
-        db().table("satellite_features")
-        .select("date, " + ", ".join(INDEX_FEATURES))
-        .in_("farm_id", ids)
-        .order("date", desc=True)
-        .limit(1)
-        .execute()
-    )
-    if not src.data:
-        return None
-
-    row = {"farm_id": farm_row["id"], "date": src.data[0]["date"],
-           **{k: src.data[0][k] for k in INDEX_FEATURES}}
-    db().table("satellite_features").upsert(row, on_conflict="farm_id,date").execute()
-    print(f"[features] farm {farm_row['id'][:8]} reused {farm_row['district']} "
-          f"indices dated {row['date']}")
-    return row
+# REMOVED: borrow_district_features().
+#
+# It copied a same-district farm's latest indices onto a farm that had none.
+# That was defensible only while indices were DISTRICT-level -- fetch_indices
+# reduced a district bounding box, so every farm in a district genuinely did
+# share one value and copying invented nothing.
+#
+# app/field.py ended that. Indices are now reduced over a circle sized from
+# the farm's own area_hectares, so two farms in one district legitimately
+# differ, and copying would hand one farm another's readings while labelling
+# them as its own. A confident wrong number is worse than no number, so the
+# 404 below is now the only answer when a farm has no imagery of its own.
 
 
 def district_yield_rows(district: str, crop_type: str):
@@ -457,21 +428,72 @@ def predict_for_farm(farm_id: str, user_id: str = Depends(current_user_id)):
     """
     farm_row = owned_farm(farm_id, user_id)
 
-    feats = (
+    # IN-SEASON, then most recent -- not most recent outright.
+    #
+    # This used to be a bare `.order("date", desc=True).limit(1)`, which is the
+    # newest stored observation whatever it shows. /farms/{id}/timeseries
+    # fetches from two weeks before sowing to 45 days past expected harvest, so
+    # after a full-season fetch the newest row is POST-HARVEST BARE SOIL. The
+    # smoke test caught one: 3.85 t/ha predicted from a 2026-05-26 observation
+    # at ndvi 0.1127, months after a rabi wheat crop was off the field. The
+    # model reads that as a failed crop and cannot tell it from one.
+    #
+    # The crop's own observation window is the filter, so a kharif farm is not
+    # judged on rabi imagery and vice versa. Pre-season rows are excluded for
+    # the same reason as post-season ones: bare soil before sowing and bare
+    # soil after harvest are the same picture, and neither is the crop.
+    season = current_season(farm_row["crop_type"])
+    win_start, win_end = season_window(farm_row["crop_type"], season)
+
+    q = (
         db().table("satellite_features")
         .select("ndvi, evi, ndwi, savi, nbr, date")
         .eq("farm_id", farm_id)
-        .order("date", desc=True)
-        .limit(1)
-        .execute()
+        .gte("date", win_start)
+        .lte("date", win_end)
     )
-    row = feats.data[0] if feats.data else borrow_district_features(farm_row)
+    # Skip rows missing any index. A scene fully masked out over this field is
+    # stored with nulls, which is an absence of observation rather than an
+    # observation of nothing -- and taking the newest row regardless then hits
+    # the 422 below while a perfectly good observation sits one row down.
+    for k in INDEX_FEATURES:
+        q = q.not_.is_(k, "null")
+    feats = q.order("date", desc=True).limit(1).execute()
+    # This farm's OWN rows, or nothing. No borrowing from a neighbour: since
+    # app/field.py the indices describe this field's geometry specifically,
+    # so another farm's values would be mislabelled rather than approximate.
+    row = feats.data[0] if feats.data else None
     if not row:
+        # Distinguish "nothing fetched" from "fetched, but none of it is from
+        # this crop's season". They need different actions from the caller, and
+        # one message for both sends farmers to re-fetch imagery they already
+        # have. The extra query runs only on this path.
+        any_row = (
+            db().table("satellite_features")
+            .select("date")
+            .eq("farm_id", farm_id)
+            .order("date", desc=True)
+            .limit(1)
+            .execute()
+        )
+        if any_row.data:
+            raise HTTPException(
+                404,
+                f"No imagery inside the {farm_row['crop_type']} {season} "
+                f"observation window ({win_start} to {win_end}). The newest "
+                f"observation stored for this farm is {any_row.data[0]['date']}, "
+                f"which is outside it -- bare ground before sowing or after "
+                f"harvest, not the crop. Predicting from it would report a "
+                f"failed crop. Fetch the season with: GET /farms/{farm_id}"
+                f"/timeseries?refresh=true",
+            )
         raise HTTPException(
             404,
-            f"No imagery for {farm_row['district']} yet, and no other farm in that "
-            f"district has any to reuse. Run: "
-            f"python -m scripts.fetch_satellite_data {farm_id}",
+            f"No satellite imagery has been fetched for this farm yet. "
+            f"Fetch it with: GET /farms/{farm_id}/timeseries?refresh=true "
+            f"(about 3-7s), then retry this prediction. Imagery from other "
+            f"farms in {farm_row['district']} is deliberately not reused -- "
+            f"it describes their fields, not yours.",
         )
     if any(row[k] is None for k in INDEX_FEATURES):
         raise HTTPException(422, f"incomplete indices for {row['date']}: {row}")
