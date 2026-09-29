@@ -48,7 +48,30 @@ WEATHER_FEATURES = ["tmax_mean_c", "tmin_mean_c", "tmax_peak_c",
                     "rain_mm", "frost_days", "hot_days_35c"]
 
 
-def feature_names(use_soil, use_weather):
+def trained_crops(skip_crops=()):
+    """The crops this run actually models: CROPS minus anything skipped.
+
+    --skip-crops used to reach only audit_crops(), which meant it silenced the
+    "unknown crop" abort without excluding a single row -- load()'s filter is
+    `crop not in CROPS`, and a skipped crop is still in CROPS. Naming a crop
+    there therefore trained on it anyway, with a one-hot column and all. This
+    makes the flag mean what it says.
+    """
+    return tuple(c for c in CROPS if c not in skip_crops)
+
+
+def one_hot_for(crop, trained):
+    """One-hot over the crops being trained, not over all of CROPS.
+
+    Keeping the full-width vector and zeroing the skipped column would leave a
+    feature that is constant zero in every row -- harmless to the forest,
+    misleading in the bundle, and it would make the model look as though it
+    covers a crop it has never seen.
+    """
+    return [1.0 if c == crop else 0.0 for c in trained]
+
+
+def feature_names(use_soil, use_weather, skip_crops=()):
     """Column names for the variant actually being trained.
 
     Mirrors load()'s assembly order exactly -- idx + one_hot + soil + weather
@@ -58,7 +81,8 @@ def feature_names(use_soil, use_weather):
     yield. The saved bundle previously recorded the base 7 names for every
     variant, so a soil+weather model would have been unpromotable.
     """
-    return (list(FEATURE_NAMES)
+    return (list(INDEX_FEATURES)
+            + [f"crop_{c}" for c in trained_crops(skip_crops)]
             + (SOIL_FEATURES if use_soil else [])
             + (WEATHER_FEATURES if use_weather else []))
 
@@ -150,6 +174,11 @@ def load(use_soil=False, use_weather=False, skip_crops=()):
     # exclusion, on purpose.
     audit_crops(skip_crops)
 
+    trained = trained_crops(skip_crops)
+    if skip_crops:
+        print(f"  skipping {', '.join(sorted(skip_crops))} -- "
+              f"{len(trained)} crop(s) will be modelled")
+
     soil_ix = _index(SOIL_CSV, ["district"]) if use_soil else {}
     wx_ix = _index(WEATHER_CSV, ["district", "season", "crop_type"]) if use_weather else {}
     if use_soil and not soil_ix:
@@ -162,7 +191,7 @@ def load(use_soil=False, use_weather=False, skip_crops=()):
         for r in csv.DictReader(fh):
             # Rows predating the crop_type column are wheat by definition.
             crop = (r.get("crop_type") or "wheat").strip()
-            if crop not in CROPS:
+            if crop not in trained:
                 skipped += 1
                 continue
             try:
@@ -197,7 +226,7 @@ def load(use_soil=False, use_weather=False, skip_crops=()):
                     skipped += 1
                     continue
 
-            X.append(idx + one_hot(crop) + extra)
+            X.append(idx + one_hot_for(crop, trained) + extra)
             y.append(yld)
             districts.append(r["district"])
             seasons.append(r["season"])
@@ -462,7 +491,7 @@ def main():
         print(f"\n  Below the literature-based 0.78-0.84 expectation. Reported as computed;"
               f"\n  no tuning applied to reach a target number.")
 
-    names = feature_names(args.soil, args.weather)
+    names = feature_names(args.soil, args.weather, args.skip_crops)
     print("\nimportances:", dict(zip(names, rf.feature_importances_.round(3))))
 
     if args.no_save:
@@ -496,9 +525,12 @@ def main():
         # Per-crop holdout R2. Recorded because the POOLED figure is not a
         # statement about any single crop and, with crops whose yields span
         # 0.8 to 65 t/ha, is dominated by between-crop variance: a lookup
-        # table that knows only the crop name scores 0.914 here. The pooled
-        # model scores 0.921. Six crops are individually NEGATIVE -- worse
-        # than their own mean -- and the API needs to be able to say so.
+        # table that knows only the crop name scores ~0.914 here while the
+        # pooled model scores ~0.921. Several crops come out individually
+        # NEGATIVE -- worse than predicting their own mean -- and the API needs
+        # to be able to say so per crop. The count is deliberately not written
+        # down here: it changes with every retrain, and a stale number in a
+        # comment is worse than none.
         "per_crop_r2": {
             c: round(float(r2_score(y_te[m], rf.predict(X_te[m]))), 4)
             for c in sorted(set(crops[is_test]))
