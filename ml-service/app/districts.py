@@ -5,6 +5,20 @@ the frontend dropdowns all have to agree with this file, or a farm gets written
 that no script can ever fetch imagery for.
 """
 
+# LEGACY, AND NO LONGER THE DISTRICT SOURCE OF TRUTH. Districts now come from
+# GAUL ADM2 polygons via app.gee.get_district_geometry(), which covers all 34
+# Punjab districts; per-FARM imagery comes from app.field, which reduces over a
+# circle around the farm's own pin. Nothing about the pipeline is limited to
+# the three boxes below any more.
+#
+# Kept because three callers still read it, none of which should grow into a
+# reason to restore the 3-district architecture:
+#   app/gee.py                    default bbox for fetch_indices() + self-check
+#   scripts/fetch_historical_ndvi.py   superseded by build_training_dataset.py
+#   scripts/seed_district_yields.py    superseded by load_district_yields.py
+#
+# Do not add a fourth district here. Add it to the GAUL path instead.
+#
 # (lng_min, lat_min, lng_max, lat_max) -- GEE takes longitude FIRST.
 #
 # Verified in the GEE Code Editor before being locked in here, with the
