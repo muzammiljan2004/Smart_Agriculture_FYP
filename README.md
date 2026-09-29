@@ -56,13 +56,18 @@ Google Earth Engine (one-time, only needed for the GEE script in step 4):
 earthengine authenticate
 ```
 
-Populate `satellite_features` for a farm (bbox + dates come from the farm's
-district and crop):
+Populate `satellite_features` for a farm. The geometry is a circle around the
+farm's own pin, sized from `area_hectares`, and the window comes from its crop
+and sowing date:
 
 ```bash
-cd ml-service
-python -m scripts.fetch_satellite_data <farm_id>
+curl "http://localhost:8000/farms/<farm_id>/timeseries?refresh=true" \
+  -H "Authorization: Bearer <supabase access token>"
 ```
+
+This replaces `scripts/fetch_satellite_data.py`, which was deleted: it read a
+district bounding box, so every farm in a district received byte-identical
+indices, and it only ever held boxes for Sheikhupura, Okara and Sahiwal.
 
 Build the training CSV (3 districts x 5 seasons):
 
