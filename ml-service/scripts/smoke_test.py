@@ -5,10 +5,10 @@
 
 Prints PASS / FAIL / BLOCKED per check and exits non-zero if anything FAILED.
 
-WHAT THIS IS. Ten checks over the seams that have actually broken in this
+WHAT THIS IS. Eleven checks over the seams that have actually broken in this
 project: cross-user access, per-farm imagery isolation, model metadata, the
-per-crop caveats, the PDF, the no-imagery path, and which observation
-/predict actually feeds the model. It runs the real FastAPI
+per-crop caveats, the PDF, the no-imagery path, which observation
+/predict actually feeds the model, and the no-crop guard. It runs the real FastAPI
 app in-process against the real Supabase project with REAL bearer tokens --
 not dependency overrides -- so the auth path is genuinely exercised.
 
@@ -82,11 +82,13 @@ def make_user(email, key):
     return u, {"Authorization": f"Bearer {tok}"}
 
 
-def make_farm(owner, crop, season, lat, lng, district, label, area=2.0):
+def make_farm(owner, crop, season, lat, lng, district, label, area=2.0,
+              planting=None):
     row = db().table("farms").insert({
         "owner_id": owner, "farmer_name": f"SMOKE {TAG} {label}",
         "gps_lat": lat, "gps_lng": lng, "district": district,
         "crop_type": crop, "season": season, "area_hectares": area,
+        **({"planting_date": planting} if planting else {}),
     }).execute().data[0]
     made_farms.append(row["id"])
     return row
@@ -378,6 +380,162 @@ def main():
         check("G5 the refusal says the imagery is outside the window",
               "outside" in detail and newest_date.isoformat() in detail,
               detail[:130])
+
+        # ---------------------------------------------------------- H
+        # The no-crop guard. Farm 6cc28b46 sat on ground Dynamic World calls
+        # 100% built and /predict answered 3.41 t/ha, because the forest reads
+        # the crop one-hot far harder than the indices. Both halves are
+        # asserted here: the flat series must be refused AND a crop-shaped one
+        # must still go through, or a guard that simply refuses everything
+        # would pass a one-sided test.
+        print("")
+        print("H. no-crop guard")
+
+        def plant_series(label, values):
+            """A farm carrying these NDVI values, evenly spread in-season."""
+            f = make_farm(a_id, "wheat", "rabi", 31.49882, 73.72578,
+                          "Sheikhupura", label)
+            span = (w1 - w0).days
+            step = span // (len(values) + 1)
+            db().table("satellite_features").insert([
+                {"farm_id": f["id"],
+                 "date": (w0 + timedelta(days=step * (i + 1))).isoformat(),
+                 "ndvi": v, "evi": round(v * 0.9, 4), "ndwi": round(v * 0.5, 4),
+                 "savi": round(v * 1.1, 4), "nbr": round(v * 0.8, 4)}
+                for i, v in enumerate(values)
+            ]).execute()
+            return f
+
+        # HA. The measured built-up series: 12 readings, none above 0.20.
+        flat = plant_series("flat-no-crop",
+                            [0.169, 0.189, 0.178, 0.131, 0.083, 0.153,
+                             0.196, 0.130, 0.155, 0.128, 0.197, 0.198])
+        r = c.get(f"/farms/{flat['id']}/predict", headers=HA)
+        detail = str((r.json() or {}).get("detail", "")) if r.status_code != 200 else ""
+        check("HA flat low-NDVI series is refused", r.status_code == 422,
+              f"HTTP {r.status_code}")
+        check("HA no yield is fabricated for it",
+              "predicted_yield" not in r.text
+              and "No active crop vegetation" in detail,
+              detail[:120])
+        check("HA the refusal reports its evidence",
+              "0.198" in detail and "12 observations" in detail,
+              "peak and observation count both named")
+
+        # HB. A crop-shaped season over the same window: green-up, peak,
+        # senescence. Must still predict.
+        good = plant_series("crop-shaped",
+                            [0.18, 0.24, 0.38, 0.55, 0.71, 0.82,
+                             0.79, 0.68, 0.52, 0.39, 0.28, 0.22])
+        r = c.get(f"/farms/{good['id']}/predict", headers=HA)
+        j = r.json() if r.status_code == 200 else {}
+        check("HB crop-shaped series still predicts",
+              r.status_code == 200
+              and isinstance(j.get("predicted_yield"), (int, float)),
+              f"HTTP {r.status_code} -> {j.get('predicted_yield')} "
+              f"from {j.get('feature_date')}")
+
+        # HC. Low but ALIVE. Never clears 0.25, yet swings 0.21 across the
+        # season -- a weak crop, not a missing one. The amplitude clause is
+        # what keeps this from being refused, and requirement 5 turns on it.
+        weak = plant_series("low-but-alive",
+                            [0.03, 0.06, 0.11, 0.18, 0.24, 0.23,
+                             0.19, 0.14, 0.09, 0.06, 0.05, 0.03])
+        r = c.get(f"/farms/{weak['id']}/predict", headers=HA)
+        check("HC low-yield-but-living series is NOT refused",
+              r.status_code == 200,
+              f"HTTP {r.status_code}; peak 0.24 is under the 0.25 bar but it "
+              f"varies by 0.21, so it is a poor crop rather than no crop")
+
+        # ---------------------------------------------------------- I
+        # A sowing date outside the crop's conventional season. The fetch
+        # window follows the farmer and the predict window follows the
+        # calendar, and for this farm they used to be completely disjoint:
+        # "Fetch satellite imagery" stored 50 real observations that /predict
+        # then rejected as out of season, so the button could be pressed
+        # forever without ever producing a prediction.
+        print("")
+        print("I. sowing date outside the crop's calendar season")
+        from app.field import InvalidSowingDate, season_bounds
+        from app.main import _field_window
+
+        wrong = make_farm(a_id, "wheat", "rabi", 30.6525, 73.6461,
+                          "Okara", "wrong-season", planting="2026-06-15")
+
+        # I1. The two windows must overlap. Pure arithmetic, no GEE.
+        _, fa, fb = _field_window(wrong)
+        pw0, pw1 = _win("wheat", _season("wheat"))
+        check("I1 fetch window overlaps the predict window",
+              not (fb < pw0 or fa > pw1),
+              f"fetch {fa}..{fb}  vs  predict {pw0}..{pw1}")
+
+        # I3. A future sowing date must name itself rather than arriving as a
+        # generic "no imagery" 404. Also pure -- run before I2 so it still
+        # reports under --no-gee.
+        try:
+            season_bounds("wheat", date(2026, 11, 20), date(2026, 9, 29))
+            check("I3 future sowing date is refused by name", False,
+                  "*** it produced a window instead ***")
+        except InvalidSowingDate as e:
+            check("I3 future sowing date is refused by name",
+                  "2026-11-20" in str(e), str(e)[:100])
+
+        # I2. The verdict has to be the RIGHT one.
+        #
+        # An earlier version of this check asserted only that the refresh loop
+        # had ended, and it passed while /predict answered 2.68 t/ha from
+        # 2026-03-15 -- three months before the farmer says they sowed. The
+        # test encoded the wrong requirement: the goal is not "a verdict", it
+        # is a verdict about THIS farmer's crop cycle.
+        if args.no_gee:
+            record("I2 wrong-season farm is refused, not predicted from "
+                   "pre-sowing imagery", "BLOCKED", "--no-gee")
+        else:
+            rt = c.get(f"/farms/{wrong['id']}/timeseries?refresh=true", headers=HA)
+            n = (rt.json() or {}).get("count", 0) if rt.status_code == 200 else 0
+            r = c.get(f"/farms/{wrong['id']}/predict", headers=HA)
+            body = r.json() or {}
+            detail = str(body.get("detail", "")) if r.status_code != 200 else ""
+
+            check("I2a the refresh loop is over", not (r.status_code == 404
+                                                       and "refresh=true" in r.text),
+                  f"fetched {n} observation(s); /predict -> HTTP {r.status_code}")
+            check("I2b it did NOT predict from the pre-sowing 2026-03-15 frame",
+                  r.status_code == 422
+                  and "predicted_yield" not in r.text
+                  and body.get("feature_date") != "2026-03-15",
+                  f"HTTP {r.status_code}, feature_date {body.get('feature_date')}")
+            check("I2c the refusal names the crop, the sowing date and the window",
+                  all(s in detail for s in ("wheat", "2026-06-15", pw0, pw1))
+                  and "sowing date" in detail,
+                  detail[:150])
+
+        # I4. The other half: a NORMALLY sown farm must be untouched by the
+        # rule above. Without this, refusing everything would pass I2.
+        if args.no_gee:
+            record("I4 normal wheat farm keeps its observation", "BLOCKED", "--no-gee")
+        else:
+            normal = make_farm(a_id, "wheat", "rabi", 31.49882, 73.72578,
+                               "Sheikhupura", "normal-sowing", planting="2025-11-15")
+            c.get(f"/farms/{normal['id']}/timeseries?refresh=true", headers=HA)
+
+            # What the window alone would pick, ignoring the sowing date --
+            # i.e. the selection as it behaved before this rule existed.
+            qq = (db().table("satellite_features")
+                  .select("date").eq("farm_id", normal["id"])
+                  .gte("date", pw0).lte("date", pw1))
+            for k in ("ndvi", "evi", "ndwi", "savi", "nbr"):
+                qq = qq.not_.is_(k, "null")
+            before = (qq.order("date", desc=True).limit(1).execute().data or [{}])
+            before_date = before[0].get("date")
+
+            r = c.get(f"/farms/{normal['id']}/predict", headers=HA)
+            j = r.json() if r.status_code == 200 else {}
+            check("I4 normal wheat farm predicts, and from the SAME observation "
+                  "as before the rule",
+                  r.status_code == 200 and j.get("feature_date") == before_date,
+                  f"HTTP {r.status_code}; window-only pick {before_date}, "
+                  f"actual {j.get('feature_date')}; sown 2025-11-15")
 
     return 0
 

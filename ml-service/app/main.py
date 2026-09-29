@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from app import alerts, land, suitability
 from app.db import db
 from app.districts import CROPS, INDEX_FEATURES, one_hot, season_window
+from app.field import no_crop
 
 # Below this many TRAINING rows, a crop's prediction carries a thin-data
 # caveat. 150 is a judgement call, not a derived threshold: it sits above the
@@ -458,11 +459,51 @@ def predict_for_farm(farm_id: str, user_id: str = Depends(current_user_id)):
     # the 422 below while a perfectly good observation sits one row down.
     for k in INDEX_FEATURES:
         q = q.not_.is_(k, "null")
-    feats = q.order("date", desc=True).limit(1).execute()
+    # No .limit(1): the SELECTION is unchanged -- still the newest in-season
+    # row -- but the whole in-season series is needed a few lines down for the
+    # no-crop check, and one query serving both beats a second round trip.
+    feats = q.order("date", desc=True).execute()
+
+    # THEN: on or after the farmer's own sowing date.
+    #
+    # The window above is the TRAINING CONTRACT -- the calendar range the
+    # model's features were built from. It says nothing about whether a crop
+    # existed. planting_date is the farmer's claim about reality, and an
+    # observation taken before they sowed is, by definition, not their crop.
+    #
+    # For a normally sown field the whole in-window series already follows
+    # sowing and this changes nothing; it was checked across every farm
+    # holding imagery and only the conflicting one moved. It matters when the
+    # two disagree: a wheat farm sown 2026-06-15 had all 25 of its in-window
+    # observations sitting BEFORE that date, and /predict answered 2.68 t/ha
+    # from 2026-03-15 -- ninety-two days before the crop went in, describing
+    # the previous rabi cycle on that land. A confident number about the wrong
+    # crop cycle is worse than a refusal, because it looks like an answer.
+    sown_on = farm_row.get("planting_date")
+    in_window = feats.data or []
+    usable = [r for r in in_window if r["date"] >= sown_on] if sown_on else in_window
+
     # This farm's OWN rows, or nothing. No borrowing from a neighbour: since
     # app/field.py the indices describe this field's geometry specifically,
     # so another farm's values would be mislabelled rather than approximate.
-    row = feats.data[0] if feats.data else None
+    row = usable[0] if usable else None
+    if not row and in_window and sown_on:
+        # Imagery exists inside the model's window, but every frame of it
+        # predates sowing. Refusing is the only honest answer: there is no
+        # picture of this crop cycle to predict from, and inventing one by
+        # reaching backwards is exactly the bug this replaces.
+        raise HTTPException(
+            422,
+            f"No imagery of this crop cycle. The sowing date entered for this "
+            f"farm is {sown_on}, but the model's {farm_row['crop_type']} "
+            f"observation window for {season} runs {win_start} to {win_end}, "
+            f"and all {len(in_window)} observation(s) inside that window were "
+            f"taken before {sown_on} -- they show the land before this crop "
+            f"was sown, not the crop. No yield can be predicted for a "
+            f"{farm_row['crop_type']} crop sown on {sown_on}. If that sowing "
+            f"date was entered incorrectly, correct it on the farm and try "
+            f"again.",
+        )
     if not row:
         # Distinguish "nothing fetched" from "fetched, but none of it is from
         # this crop's season". They need different actions from the caller, and
@@ -497,6 +538,25 @@ def predict_for_farm(farm_id: str, user_id: str = Depends(current_user_id)):
         )
     if any(row[k] is None for k in INDEX_FEATURES):
         raise HTTPException(422, f"incomplete indices for {row['date']}: {row}")
+
+    # Did anything actually grow here this season? The forest cannot tell: it
+    # reads the crop label far more strongly than the indices, so a built-up
+    # plot registered as wheat comes back near the wheat mean. See app.field
+    # for the thresholds and the measurements behind them.
+    flat = no_crop([r["ndvi"] for r in usable])
+    if flat:
+        raise HTTPException(
+            422,
+            f"No active crop vegetation detected in the available in-season "
+            f"satellite imagery. Refresh imagery or verify the field location. "
+            f"Across {flat['observations']} observations in the "
+            f"{farm_row['crop_type']} {season} window ({win_start} to "
+            f"{win_end}) NDVI peaked at {flat['ndvi_peak']} and varied by only "
+            f"{flat['ndvi_amplitude']} (median {flat['ndvi_median']}); a "
+            f"growing field reaches roughly 0.6-0.9 at peak. No yield is "
+            f"reported, because the model would answer from the crop name "
+            f"rather than from this imagery.",
+        )
 
     result = predict(
         Features(crop_type=farm_row["crop_type"], **{k: row[k] for k in INDEX_FEATURES}),
@@ -671,7 +731,31 @@ def list_farms(user_id: str = Depends(current_user_id)):
 # composite over a district. They share nothing but the ownership gate.
 
 def _field_window(farm_row, start=None, end=None):
-    """Resolve the fetch window, defaulting to this field's current season."""
+    """Resolve the fetch window, defaulting to this field's current season.
+
+    TWO WINDOWS EXIST AND THEY CAN DISAGREE. season_bounds follows the FARMER:
+    it brackets the date they entered, which is what the growth curve and the
+    harvest detector need. season_window follows the CALENDAR: a fixed
+    per-crop range that /predict uses because it is the range the model was
+    trained on, and it ignores planting_date entirely.
+
+    For a normally-sown field the two overlap and this changes nothing. For a
+    field whose sowing date falls outside its crop's conventional season they
+    can be completely disjoint -- a wheat farm sown 2026-06-15 fetches
+    2026-06-01..2026-09-29 while /predict looks in 2025-12-01..2026-03-15 --
+    and then the fetch can never produce a row /predict will accept. Clicking
+    "Fetch satellite imagery" re-fetched the same 50 unusable observations and
+    returned the same 404 every time, while the UI promised it would help.
+
+    So when they are disjoint, fetch the UNION: the farmer's window for the
+    lifecycle features, the calendar window so a prediction is possible, and
+    nothing in between is wasted because it is one Earth Engine call either
+    way. The end is still capped at today -- asking for the future returns an
+    empty collection that looks exactly like a data gap.
+
+    season_window itself is untouched. This widens what is FETCHED, never what
+    the model is given.
+    """
     from app.field import season_bounds
 
     sown = (date.fromisoformat(farm_row["planting_date"])
@@ -679,7 +763,13 @@ def _field_window(farm_row, start=None, end=None):
             else default_sowing_date(farm_row["crop_type"], date.today()))
     if start and end:
         return sown, start, end
-    a, b = season_bounds(farm_row["crop_type"], sown)
+
+    crop = farm_row["crop_type"]
+    a, b = season_bounds(crop, sown)
+    w0, w1 = season_window(crop, current_season(crop))
+    if b < w0 or a > w1:
+        today = date.today().isoformat()
+        a, b = min(a, w0), min(max(b, w1), today)
     return sown, start or a, end or b
 
 
@@ -714,7 +804,13 @@ def farm_timeseries(farm_id: str, start: str = None, end: str = None,
         from app.field import field_series
         from app.gee import NoImagery
 
-        sown, a, b = _field_window(farm_row, start, end)
+        from app.field import InvalidSowingDate
+
+        try:
+            sown, a, b = _field_window(farm_row, start, end)
+        except InvalidSowingDate as e:
+            # The farmer's input, not an outage: 422, and say which date.
+            raise HTTPException(422, str(e))
         try:
             rows = field_series(farm_row["gps_lat"], farm_row["gps_lng"],
                                 farm_row.get("area_hectares"), a, b)

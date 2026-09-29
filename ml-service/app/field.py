@@ -22,6 +22,15 @@ import ee
 from app.crops import INDEX_FEATURES
 from app.gee import NoImagery, init, with_retry
 
+class InvalidSowingDate(ValueError):
+    """A planting date that cannot produce an observation window.
+
+    A ValueError rather than NoImagery on purpose: NoImagery means the sky was
+    in the way, which is a fact about the world and nothing the farmer can fix.
+    This is a fact about the input.
+    """
+
+
 # Sentinel-2's usable bands are 10-20 m, so a field smaller than about a
 # quarter hectare is a handful of pixels and its mean is mostly edge effects.
 # Below this the numbers are still returned, but valid_px will be small and
@@ -216,6 +225,78 @@ def field_series(lat, lng, area_hectares, start, end, radar=True):
     return [merged[d] for d in sorted(merged)]
 
 
+# ---------------------------------------------------------------- no-crop
+# A field that never greens up is not a failed crop, it is not a crop. The
+# yield model cannot make that distinction: it reads the crop one-hot far more
+# strongly than the indices (crop_sugarcane alone carries 0.75 of the model's
+# importance against 0.09 for all five indices together), so handed a built-up
+# plot labelled "wheat" it answers with something close to the wheat mean. It
+# did: 3.41 t/ha for a 1 ha circle that Dynamic World calls 100% built.
+#
+# THRESHOLDS, AND THE EVIDENCE FOR THEM. Two sources were measured first.
+#
+#   Field scale, this project's farms, in-season NDVI:
+#       [DEV] Sheikhupura wheat   peak 0.873   amplitude 0.655
+#       [DEV] Okara wheat         peak 0.845   amplitude 0.731
+#       [DEV] Sahiwal wheat       peak 0.902   amplitude 0.854
+#       [DEV] Sheikhupura rice    peak 0.948   amplitude 0.902
+#       FYP-Test (built-up)       peak 0.198   amplitude 0.115
+#
+#   District scale, 2378 district-crop-seasons over 11 crops (the Step 11
+#   experiment). These are 500 m means over ~5,000 km2, so they include
+#   towns, roads and water and are the most heavily damped real-cropland
+#   signal available anywhere in the data:
+#       lowest NDVI peak of any row, any crop : 0.218
+#       1st percentile                        : 0.307
+#       lowest amplitude of any row           : 0.000  (bajra)
+#
+# PEAK_NDVI = 0.25 sits just above that district floor of 0.218 and 3.4x
+# BELOW the lowest real FIELD peak of 0.845. Deliberately near the negative
+# example rather than midway: a false refusal costs a farmer their forecast,
+# while a false pass only leaves today's behaviour unchanged.
+#
+# AMPLITUDE is required as well, not instead. District amplitude bottoms out
+# at 0.000, so on its own it would reject real cropland. As a second condition
+# it protects the cases a peak test alone would get wrong in the other
+# direction: an orchard or a perennial sits high and flat and is not refused,
+# because its peak clears the bar.
+#
+# BOTH must be true, over enough observations. One low reading is a cloudy
+# day, not a verdict.
+NO_CROP_PEAK_NDVI = 0.25
+NO_CROP_AMPLITUDE = 0.20
+NO_CROP_MIN_OBS = 6
+
+
+def no_crop(values):
+    """Diagnostics if these in-season NDVI values show no crop, else None.
+
+    Conservative by construction: it returns None -- meaning "carry on" --
+    whenever the series is too short to judge, whenever the field reaches a
+    normal canopy at any point in the season, and whenever it varies like
+    something growing. It fires only when a field was watched for a whole
+    season and never did either.
+
+    Deliberately NOT a productivity test. A poor bajra crop peaks far above
+    0.25 at field resolution; what this catches is ground that never had a
+    crop on it at all.
+    """
+    vals = [v for v in values if v is not None]
+    if len(vals) < NO_CROP_MIN_OBS:
+        return None
+    peak, low = max(vals), min(vals)
+    if peak >= NO_CROP_PEAK_NDVI or (peak - low) >= NO_CROP_AMPLITUDE:
+        return None
+    ordered = sorted(vals)
+    return {
+        "observations": len(vals),
+        "ndvi_peak": round(peak, 4),
+        "ndvi_min": round(low, 4),
+        "ndvi_amplitude": round(peak - low, 4),
+        "ndvi_median": round(ordered[len(ordered) // 2], 4),
+    }
+
+
 def season_bounds(crop_type: str, sown: date, today: date | None = None) -> tuple[str, str]:
     """The window to fetch for a field sown on `sown`.
 
@@ -230,6 +311,19 @@ def season_bounds(crop_type: str, sown: date, today: date | None = None) -> tupl
     today = today or date.today()
     start = sown - timedelta(days=14)
     end = min(sown + timedelta(days=DURATION_DAYS[crop_type] + 45), today)
+    if end < start:
+        # The cap at today is unconditional, so a sowing date in the future
+        # produces a window that ends before it begins. Earth Engine does not
+        # object: filterDate with the bounds the wrong way round returns an
+        # empty collection, indistinguishable from cloud cover, and the farmer
+        # is told there is no imagery when the real problem is the date they
+        # typed. Name it instead.
+        raise InvalidSowingDate(
+            f"sowing date {sown.isoformat()} is in the future (today is "
+            f"{today.isoformat()}), so there is no imagery of this crop to "
+            f"fetch yet. Correct the sowing date, or wait until the crop is "
+            f"in the ground."
+        )
     return start.isoformat(), end.isoformat()
 
 
@@ -287,4 +381,42 @@ if __name__ == "__main__":
     ])
     assert len(dup) == 1 and dup[0]["valid_px"] == 120, dup
 
-    print("field geometry/merge self-check OK")
+    # --- no-crop guard: offline, on the series actually measured -----------
+    # The built-up plot: 21 in-season observations, none above 0.20.
+    built = [0.1687, 0.1893, 0.1779, 0.1794, 0.1306, 0.1647, 0.0827, 0.1533,
+             0.1955, 0.1765, 0.1302, 0.1629, 0.1552, 0.1707, 0.1547, 0.1610,
+             0.1284, 0.1622, 0.1969, 0.1891, 0.1979]
+    d = no_crop(built)
+    assert d and d["observations"] == 21, d
+    assert d["ndvi_peak"] == 0.1979 and d["ndvi_amplitude"] == 0.1152, d
+
+    # Real wheat and rice fields must pass on the peak alone.
+    assert no_crop([0.22, 0.31, 0.55, 0.873, 0.61, 0.30, 0.25]) is None
+    assert no_crop([0.046, 0.20, 0.51, 0.948, 0.72, 0.33, 0.18]) is None
+
+    # Too few observations is not evidence of absence.
+    assert no_crop([0.10, 0.11, 0.12]) is None, "under MIN_OBS must not fire"
+
+    # Low but ALIVE: never reaches 0.25, yet swings 0.21 across the season.
+    # A weak crop, not a missing one -- the amplitude clause must let it by.
+    assert no_crop([0.03, 0.05, 0.12, 0.24, 0.21, 0.09, 0.04]) is None
+
+    # High and FLAT: an orchard or perennial. Peak clears the bar, so the
+    # amplitude clause must not be enough on its own to refuse it.
+    assert no_crop([0.62, 0.64, 0.61, 0.63, 0.65, 0.62, 0.63]) is None
+
+    # Nulls are gaps, not zeros: they must not drag the minimum down.
+    assert no_crop([None] * 20 + [0.30]) is None, "nulls must not count as observations"
+
+    # --- sowing-date validation: offline -----------------------------------
+    assert season_bounds("wheat", date(2026, 6, 15), date(2026, 9, 29)) ==         ("2026-06-01", "2026-09-29")
+    for future in (date(2026, 11, 20), date(2026, 12, 1)):
+        try:
+            season_bounds("wheat", future, date(2026, 9, 29))
+            raise AssertionError(f"{future} is in the future and must be refused")
+        except InvalidSowingDate as e:
+            assert future.isoformat() in str(e), e
+    # The boundary: sown exactly 14 days ahead still yields start == today.
+    assert season_bounds("wheat", date(2026, 10, 13), date(2026, 9, 29)) ==         ("2026-09-29", "2026-09-29")
+
+    print("field geometry/merge/no-crop/sowing self-check OK")
