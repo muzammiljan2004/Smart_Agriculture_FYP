@@ -375,6 +375,9 @@ export default function Dashboard({ farm }) {
   const [pred, setPred] = useState(null)
   const [err, setErr] = useState(null)
   const [downloading, setDownloading] = useState(false)
+  // Bumped after a manual imagery fetch, to re-run the prediction effect.
+  const [attempt, setAttempt] = useState(0)
+  const [fetching, setFetching] = useState(false)
   const [suit, setSuit] = useState(null)
   const [suitErr, setSuitErr] = useState(null)
   const yieldNow = useCountUp(pred?.predicted_yield)
@@ -439,7 +442,48 @@ export default function Dashboard({ farm }) {
       })
 
     return () => { alive = false }   // stale response must not overwrite newer state
-  }, [farm.id])
+  }, [farm.id, attempt])
+
+  // The API's 404 for missing imagery is written for whoever calls the API,
+  // and it ends in a curl-shaped instruction. A farmer cannot act on
+  // "GET /farms/<uuid>/timeseries?refresh=true" -- so when that is the
+  // reason, show the button that does it instead of the sentence describing
+  // it. The marker is the query string, which both imagery 404s carry and no
+  // other error does.
+  const needsImagery = Boolean(err && err.includes('timeseries?refresh=true'))
+  // The fetch panel owns the only progress indicator, so it has to stay
+  // mounted for the whole request. Clearing err on click used to unmount it
+  // mid-flight, dropping the user back to the generic first-load skeleton
+  // with no button, no message and no sign that anything was happening.
+  const showFetchPanel = needsImagery || fetching
+  // The second 404: imagery exists, but all of it falls outside this crop's
+  // observation window, so it is bare ground rather than the crop.
+  const outOfSeason = needsImagery && err.includes('outside')
+
+  async function fetchImagery() {
+    setFetching(true)
+    // err is deliberately NOT cleared here: it is what keeps this panel on
+    // screen. On success the prediction effect clears it; on failure the
+    // catch below replaces it. Either way the user is never left looking at
+    // a bare skeleton.
+    try {
+      const r = await fetch(
+        API + '/farms/' + farm.id + '/timeseries?refresh=true',
+        { headers: await authHeader() }
+      )
+      const body = await r.json()
+      if (!r.ok) throw new Error(body.detail ?? 'HTTP ' + r.status)
+      setAttempt((n) => n + 1)       // re-runs the prediction effect above
+    } catch (e) {
+      setErr(
+        e.message === 'Failed to fetch'
+          ? `Cannot reach the service at ${API}.`
+          : e.message
+      )
+    } finally {
+      setFetching(false)
+    }
+  }
 
   async function downloadReport() {
     setDownloading(true)
@@ -523,17 +567,42 @@ export default function Dashboard({ farm }) {
         <div className="relative">
           <p className="text-xs font-semibold uppercase tracking-widest text-leaf-300">Predicted yield</p>
 
-          {!pred && !err && (
+          {!pred && !err && !fetching && (
             <div className="mt-3 animate-pulse space-y-3">
               <div className="h-14 w-52 rounded-lg bg-leaf-800" />
               <div className="h-3 w-72 rounded bg-leaf-800" />
             </div>
           )}
 
-          {err && (
+          {(err || fetching) && (
             <div className="mt-3 max-w-2xl">
               <p className="font-display text-2xl font-semibold text-wheat-300">No prediction yet</p>
-              <p className="mt-2 text-sm text-leaf-200">{err}</p>
+              {showFetchPanel ? (
+                <>
+                  <p className="mt-2 text-sm text-leaf-200">
+                    {fetching
+                      ? `Reading Sentinel-2 and Sentinel-1 for this field.
+                         This usually takes 10-30 seconds.`
+                      : outOfSeason
+                      ? `The satellite images stored for this field are all from outside the
+                         ${farm.crop_type} growing season, so they show bare ground rather than
+                         the crop. Fetching the season's imagery will fix this.`
+                      : `No satellite imagery has been collected for this field yet. This takes
+                         a few seconds and only needs doing once per season.`}
+                  </p>
+                  <button
+                    onClick={fetchImagery}
+                    disabled={fetching}
+                    className="mt-3 rounded-lg bg-wheat-400 px-4 py-2 text-sm font-medium
+                               text-leaf-900 transition hover:bg-wheat-300
+                               disabled:opacity-60"
+                  >
+                    {fetching ? 'Fetching satellite imagery…' : 'Fetch satellite imagery'}
+                  </button>
+                </>
+              ) : (
+                <p className="mt-2 text-sm text-leaf-200">{err}</p>
+              )}
             </div>
           )}
 
