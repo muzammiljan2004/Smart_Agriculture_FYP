@@ -70,6 +70,20 @@ export const SEASON = {
   jowar: 'kharif',
 }
 
+// Crops the pipeline has no data for: zero rows in training_data_real.csv, so
+// no yield model, no satellite indices, nothing to say. They stay VISIBLE so
+// the list still reads as the real Punjab crop set rather than looking
+// arbitrarily short, but they cannot be chosen.
+//
+// This list must match the CHECK in
+// supabase/migrations/20260928110000_restrict_farms_to_modelled_crops.sql.
+// The database is the real gate — the browser writes farms directly through
+// PostgREST, so a disabled <option> is a courtesy, not a control.
+//
+// NOT the same thing as "no yield model yet", which is read live from /health
+// below and can change on every retrain. These three are a data gap.
+export const COMING_SOON = new Set(['garlic', 'brinjal', 'chilli'])
+
 const WATER_SOURCES = [
   ['canal_and_tubewell', 'Canal + tubewell'],
   ['canal', 'Canal only'],
@@ -205,7 +219,9 @@ export default function FarmForm({ onCreated }) {
             Crop
             <select value={form.crop_type} onChange={set('crop_type')} className={field}>
               {Object.entries(SEASON).map(([c, s]) => (
-                <option key={c} value={c}>{title(c)} ({s})</option>
+                <option key={c} value={c} disabled={COMING_SOON.has(c)}>
+                  {title(c)} ({s}){COMING_SOON.has(c) ? ' — Coming soon' : ''}
+                </option>
               ))}
             </select>
           </label>
