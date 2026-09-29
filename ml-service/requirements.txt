@@ -1,9 +1,17 @@
 # Loose lower bounds on purpose: the team is on Python 3.13, and hard pins to
 # older minors have no cp313 wheels (pip would try to compile numpy/sklearn).
+#
+# scikit-learn is the ONE exception, and it is pinned exactly. app/model.pkl is
+# a pickled RandomForestRegressor, and a pickle carries no version negotiation:
+# loading it under a different sklearn emits InconsistentVersionWarning 502
+# times (once per tree) and the docs are explicit that the result is undefined,
+# not merely noisy. A teammate on a different minor could get silently
+# different predictions from the same file. Pin it to whatever version last
+# WROTE model.pkl, and move the pin when the model is retrained.
 fastapi>=0.115
 uvicorn[standard]>=0.32
 pydantic>=2.9
-scikit-learn>=1.5
+scikit-learn==1.9.1
 numpy>=2.0
 joblib>=1.4
 supabase>=2.9
