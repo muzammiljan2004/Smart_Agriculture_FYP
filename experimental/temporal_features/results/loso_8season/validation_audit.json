@@ -1,0 +1,449 @@
+{
+  "result": "PASS",
+  "generated": "2026-09-30",
+  "scripts_executed": [
+    "experimental/temporal_features/run_loso.py  (this file)",
+    "imports ml-service/scripts/build_temporal_features.py (feature_columns, temporal_features, MIN_VALID_PX)",
+    "imports ml-service/scripts/train_temporal_experiment.py (matrix, impute, COVERAGE, PROD, RF_KWARGS)",
+    "imports ml-service/app/crops.py (season_window) -- read only"
+  ],
+  "inputs": {
+    "features_csv": "training_data_temporal_experiment.csv",
+    "raw_observations_csv": "temporal_observations_raw.csv",
+    "rows": 2378,
+    "raw_observations": 136687
+  },
+  "seasons_used": [
+    "2017-18",
+    "2018-19",
+    "2019-20",
+    "2020-21",
+    "2021-22",
+    "2022-23",
+    "2023-24",
+    "2024-25"
+  ],
+  "seasons_excluded": {
+    "2015-16": "no Sentinel-2 L2A (collection begins 2017-03-28)",
+    "2016-17": "no Sentinel-2 L2A for the rabi window"
+  },
+  "crops_used": [
+    "bajra",
+    "barley",
+    "cotton",
+    "jowar",
+    "maize",
+    "onion",
+    "potato",
+    "rice",
+    "sugarcane",
+    "tomato",
+    "wheat"
+  ],
+  "validation": "leave-one-season-out, 8 folds",
+  "min_rows_for_a_scored_fold": 5,
+  "feature_groups": {
+    "current": {
+      "columns": [
+        "prod_ndvi",
+        "prod_evi",
+        "prod_ndwi",
+        "prod_savi",
+        "prod_nbr"
+      ],
+      "note": "the production feature GROUP (season-median composite indices) refit on these rows; not the shipped model.pkl, which has a fixed split and cannot be cross-validated"
+    },
+    "temporal": {
+      "n_columns": 100
+    },
+    "veg_only": {
+      "n_columns": 90,
+      "excluded": [
+        "valid_observation_count",
+        "early_observation_count",
+        "mid_observation_count",
+        "late_observation_count",
+        "segments_covered",
+        "cloud_pct_mean",
+        "valid_px_mean",
+        "first_obs_doy_frac",
+        "last_obs_doy_frac",
+        "max_gap_days"
+      ]
+    }
+  },
+  "features_per_arm_after_isna_flags_and_one_hot": {
+    "current": 21,
+    "temporal": 211,
+    "veg_only": 191
+  },
+  "preprocessing": {
+    "scaling": "none -- a random forest is scale invariant",
+    "feature_selection": "none",
+    "hyperparameter_tuning": "none; RF_KWARGS is fixed at {\"n_estimators\": 500, \"max_depth\": 25, \"criterion\": \"squared_error\", \"random_state\": 42, \"n_jobs\": -1}",
+    "one_hot": "built from the TRAINING seasons' crops only"
+  },
+  "imputation": {
+    "method": "column median, plus a companion _isna flag per column",
+    "fitted_on": "training rows of each fold only (impute(Xtr, Xte))",
+    "source": "scripts.train_temporal_experiment.impute"
+  },
+  "season_window_checks": {
+    "raw_observations": 136687,
+    "observations_outside_own_season_window": 0,
+    "affected_rows": 0,
+    "affected_crops": [],
+    "seasons_sharing_a_calendar_date": []
+  },
+  "recompute_check": {
+    "rows_recomputed_from_own_season_only": 60,
+    "differing_values": 0
+  },
+  "duplicate_checks": {
+    "unique_district_crop_season_keys": 2378,
+    "rows": 2378,
+    "duplicate_rows": 0
+  },
+  "missing_data": {
+    "engineered_columns": 100,
+    "fully_populated_columns": 40,
+    "worst_columns": [
+      {
+        "column": "ndwi_growth_slope",
+        "missing": 218,
+        "pct": 9.17
+      },
+      {
+        "column": "nbr_growth_slope",
+        "missing": 211,
+        "pct": 8.87
+      },
+      {
+        "column": "savi_growth_slope",
+        "missing": 211,
+        "pct": 8.87
+      },
+      {
+        "column": "ndvi_growth_slope",
+        "missing": 199,
+        "pct": 8.37
+      },
+      {
+        "column": "ndwi_decline_slope",
+        "missing": 194,
+        "pct": 8.16
+      },
+      {
+        "column": "evi_growth_slope",
+        "missing": 191,
+        "pct": 8.03
+      },
+      {
+        "column": "savi_decline_slope",
+        "missing": 191,
+        "pct": 8.03
+      },
+      {
+        "column": "evi_decline_slope",
+        "missing": 175,
+        "pct": 7.36
+      },
+      {
+        "column": "nbr_decline_slope",
+        "missing": 174,
+        "pct": 7.32
+      },
+      {
+        "column": "evi_q2_mean",
+        "missing": 168,
+        "pct": 7.06
+      }
+    ]
+  },
+  "insufficient_data_folds": [
+    {
+      "held_out_season": "2017-18",
+      "crop": "onion",
+      "n": 0,
+      "reason": "fewer than 5 rows"
+    },
+    {
+      "held_out_season": "2020-21",
+      "crop": "maize",
+      "n": 0,
+      "reason": "fewer than 5 rows"
+    },
+    {
+      "held_out_season": "2024-25",
+      "crop": "maize",
+      "n": 0,
+      "reason": "fewer than 5 rows"
+    }
+  ],
+  "folds": [
+    {
+      "held_out_season": "2017-18",
+      "train_rows": 2056,
+      "test_rows": 322,
+      "train_seasons": [
+        "2018-19",
+        "2019-20",
+        "2020-21",
+        "2021-22",
+        "2022-23",
+        "2023-24",
+        "2024-25"
+      ],
+      "held_out_rows_found_in_training": 0,
+      "crops_in_training": [
+        "bajra",
+        "barley",
+        "cotton",
+        "jowar",
+        "maize",
+        "onion",
+        "potato",
+        "rice",
+        "sugarcane",
+        "tomato",
+        "wheat"
+      ],
+      "features": {
+        "current": 21,
+        "temporal": 211,
+        "veg_only": 191
+      }
+    },
+    {
+      "held_out_season": "2018-19",
+      "train_rows": 2021,
+      "test_rows": 357,
+      "train_seasons": [
+        "2017-18",
+        "2019-20",
+        "2020-21",
+        "2021-22",
+        "2022-23",
+        "2023-24",
+        "2024-25"
+      ],
+      "held_out_rows_found_in_training": 0,
+      "crops_in_training": [
+        "bajra",
+        "barley",
+        "cotton",
+        "jowar",
+        "maize",
+        "onion",
+        "potato",
+        "rice",
+        "sugarcane",
+        "tomato",
+        "wheat"
+      ],
+      "features": {
+        "current": 21,
+        "temporal": 211,
+        "veg_only": 191
+      }
+    },
+    {
+      "held_out_season": "2019-20",
+      "train_rows": 2039,
+      "test_rows": 339,
+      "train_seasons": [
+        "2017-18",
+        "2018-19",
+        "2020-21",
+        "2021-22",
+        "2022-23",
+        "2023-24",
+        "2024-25"
+      ],
+      "held_out_rows_found_in_training": 0,
+      "crops_in_training": [
+        "bajra",
+        "barley",
+        "cotton",
+        "jowar",
+        "maize",
+        "onion",
+        "potato",
+        "rice",
+        "sugarcane",
+        "tomato",
+        "wheat"
+      ],
+      "features": {
+        "current": 21,
+        "temporal": 211,
+        "veg_only": 191
+      }
+    },
+    {
+      "held_out_season": "2020-21",
+      "train_rows": 2093,
+      "test_rows": 285,
+      "train_seasons": [
+        "2017-18",
+        "2018-19",
+        "2019-20",
+        "2021-22",
+        "2022-23",
+        "2023-24",
+        "2024-25"
+      ],
+      "held_out_rows_found_in_training": 0,
+      "crops_in_training": [
+        "bajra",
+        "barley",
+        "cotton",
+        "jowar",
+        "maize",
+        "onion",
+        "potato",
+        "rice",
+        "sugarcane",
+        "tomato",
+        "wheat"
+      ],
+      "features": {
+        "current": 21,
+        "temporal": 211,
+        "veg_only": 191
+      }
+    },
+    {
+      "held_out_season": "2021-22",
+      "train_rows": 2095,
+      "test_rows": 283,
+      "train_seasons": [
+        "2017-18",
+        "2018-19",
+        "2019-20",
+        "2020-21",
+        "2022-23",
+        "2023-24",
+        "2024-25"
+      ],
+      "held_out_rows_found_in_training": 0,
+      "crops_in_training": [
+        "bajra",
+        "barley",
+        "cotton",
+        "jowar",
+        "maize",
+        "onion",
+        "potato",
+        "rice",
+        "sugarcane",
+        "tomato",
+        "wheat"
+      ],
+      "features": {
+        "current": 21,
+        "temporal": 211,
+        "veg_only": 191
+      }
+    },
+    {
+      "held_out_season": "2022-23",
+      "train_rows": 2100,
+      "test_rows": 278,
+      "train_seasons": [
+        "2017-18",
+        "2018-19",
+        "2019-20",
+        "2020-21",
+        "2021-22",
+        "2023-24",
+        "2024-25"
+      ],
+      "held_out_rows_found_in_training": 0,
+      "crops_in_training": [
+        "bajra",
+        "barley",
+        "cotton",
+        "jowar",
+        "maize",
+        "onion",
+        "potato",
+        "rice",
+        "sugarcane",
+        "tomato",
+        "wheat"
+      ],
+      "features": {
+        "current": 21,
+        "temporal": 211,
+        "veg_only": 191
+      }
+    },
+    {
+      "held_out_season": "2023-24",
+      "train_rows": 2112,
+      "test_rows": 266,
+      "train_seasons": [
+        "2017-18",
+        "2018-19",
+        "2019-20",
+        "2020-21",
+        "2021-22",
+        "2022-23",
+        "2024-25"
+      ],
+      "held_out_rows_found_in_training": 0,
+      "crops_in_training": [
+        "bajra",
+        "barley",
+        "cotton",
+        "jowar",
+        "maize",
+        "onion",
+        "potato",
+        "rice",
+        "sugarcane",
+        "tomato",
+        "wheat"
+      ],
+      "features": {
+        "current": 21,
+        "temporal": 211,
+        "veg_only": 191
+      }
+    },
+    {
+      "held_out_season": "2024-25",
+      "train_rows": 2130,
+      "test_rows": 248,
+      "train_seasons": [
+        "2017-18",
+        "2018-19",
+        "2019-20",
+        "2020-21",
+        "2021-22",
+        "2022-23",
+        "2023-24"
+      ],
+      "held_out_rows_found_in_training": 0,
+      "crops_in_training": [
+        "bajra",
+        "barley",
+        "cotton",
+        "jowar",
+        "maize",
+        "onion",
+        "potato",
+        "rice",
+        "sugarcane",
+        "tomato",
+        "wheat"
+      ],
+      "features": {
+        "current": 21,
+        "temporal": 211,
+        "veg_only": 191
+      }
+    }
+  ]
+}

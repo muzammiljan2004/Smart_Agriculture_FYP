@@ -2,8 +2,27 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import Auth from './Auth'
 import FarmForm from './FarmForm'
-import Dashboard from './Dashboard'
-import Logo from './Logo'
+import Sidebar from './components/Sidebar'
+import TopBar from './components/TopBar'
+import { Modal } from './components/ui'
+import { useFarmData } from './hooks/useFarmData'
+import DashboardPage from './pages/DashboardPage'
+import FarmsPage from './pages/FarmsPage'
+import CropMonitoringPage from './pages/CropMonitoringPage'
+import YieldPredictionPage from './pages/YieldPredictionPage'
+import FieldIntelligencePage from './pages/FieldIntelligencePage'
+import AlertsPage from './pages/AlertsPage'
+import ReportsPage from './pages/ReportsPage'
+import SettingsPage from './pages/SettingsPage'
+
+/* NAVIGATION IS STATE, NOT A ROUTER.
+ *
+ * The design has eight destinations, two of which carry sub-tabs. react-router
+ * would add a dependency, a build-time base path and a server rewrite rule for
+ * deep links, in exchange for URLs this app never links into from outside. A
+ * page id plus a tab id is the whole of it. If shareable URLs are wanted later,
+ * everything routes through goTo() and that is the only place a router has to
+ * reach. */
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -11,6 +30,9 @@ export default function App() {
   const [selectedId, setSelectedId] = useState(null)
   const [adding, setAdding] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState('dashboard')
+  const [tab, setTab] = useState(null)
+  const [menu, setMenu] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -50,84 +72,123 @@ export default function App() {
     loadFarms()
   }, [session, loadFarms])
 
+  const selected = farms.find((f) => f.id === selectedId) ?? null
+
+  // One fetch of prediction / suitability / time series for the selected farm,
+  // shared by every page that needs it. Hoisted out of the old Dashboard so
+  // that switching tabs does not refetch the same prediction each time.
+  const data = useFarmData(selected)
+
+  const goTo = useCallback((nextPage, nextTab = null) => {
+    setPage(nextPage)
+    setTab(nextTab)
+    window.scrollTo({ top: 0 })
+  }, [])
+
   if (!session) return <Auth />
 
-  const selected = farms.find((f) => f.id === selectedId) ?? null
-  const showForm = adding || farms.length === 0
+  if (loading) {
+    return <div className="grid min-h-screen place-items-center text-muted">Loading…</div>
+  }
+
+  // First run: no farms yet, so the only useful screen is the form. Rendered
+  // full-page rather than as a modal -- there is nothing behind it to return to.
+  if (farms.length === 0) {
+    return (
+      <div className="min-h-screen px-4 py-12">
+        <FarmForm onCreated={async (farm) => { await loadFarms(); setSelectedId(farm.id) }} />
+      </div>
+    )
+  }
+
+  const openAlerts = data.pred?.alerts ?? []
+
+  const page_ = () => {
+    // Every page but Alerts and Settings is about one farm; those two are
+    // account-wide, which is why they take `farms` rather than `farm`.
+    switch (page) {
+      case 'farms':
+        return <FarmsPage farms={farms} selectedId={selectedId} onSelect={setSelectedId}
+                          onNavigate={goTo} onAddFarm={() => setAdding(true)} />
+      case 'monitoring':
+        return <CropMonitoringPage farm={selected} data={data} tab={tab ?? 'growth'}
+                                   onTab={(t) => setTab(t)} />
+      case 'yield':
+        return <YieldPredictionPage farm={selected} data={data} />
+      case 'field':
+        return <FieldIntelligencePage farm={selected} data={data} tab={tab ?? 'indices'}
+                                      onTab={(t) => setTab(t)} />
+      case 'alerts':
+        return <AlertsPage farms={farms} />
+      case 'reports':
+        return <ReportsPage farm={selected} farms={farms} selectedId={selectedId}
+                            onSelect={setSelectedId} />
+      case 'settings':
+        return <SettingsPage farms={farms} email={session.user?.email} />
+      default:
+        return <DashboardPage farm={selected} data={data} onNavigate={goTo}
+                              onAddFarm={() => setAdding(true)} />
+    }
+  }
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-[1000] border-b border-leaf-100 bg-canvas/80 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
-          <div className="flex items-center gap-2.5">
-            <Logo className="h-7 w-7" />
-            <span className="font-display text-lg font-semibold tracking-tight">Smart Agriculture</span>
-          </div>
+    <div className="min-h-screen lg:flex">
+      {/* Desktop sidebar */}
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-leaf-100 bg-white lg:block">
+        <Sidebar page={page} tab={tab} onNavigate={goTo} alertCount={openAlerts.length} />
+      </aside>
 
-          <div className="flex items-center gap-3 text-sm">
-            {farms.length > 0 && !showForm && (
-              <select
-                value={selectedId ?? ''}
-                onChange={(e) => setSelectedId(e.target.value)}
-                className="max-w-[14rem] rounded-lg border border-leaf-100 bg-white px-3 py-1.5
-                           outline-none transition focus:border-leaf-400"
-                aria-label="Select farm"
-              >
-                {farms.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.farmer_name} — {f.district}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {!showForm ? (
-              <button
-                onClick={() => setAdding(true)}
-                className="rounded-lg bg-leaf-700 px-3 py-1.5 font-medium text-white transition hover:bg-leaf-800"
-              >
-                + Farm
-              </button>
-            ) : (
-              farms.length > 0 && (
-                <button
-                  onClick={() => setAdding(false)}
-                  className="rounded-lg px-3 py-1.5 font-medium text-leaf-700 transition hover:bg-leaf-100"
-                >
-                  Cancel
-                </button>
-              )
-            )}
-
-            <button
-              onClick={() => supabase.auth.signOut()}
-              className="rounded-lg px-3 py-1.5 font-medium text-leaf-700 transition hover:bg-leaf-100"
-            >
-              Sign out
-            </button>
-          </div>
+      {/* Mobile drawer */}
+      {menu && (
+        <div className="fixed inset-0 z-[1200] lg:hidden" role="presentation"
+             onClick={() => setMenu(false)}>
+          <div className="absolute inset-0 bg-leaf-900/40 backdrop-blur-sm" />
+          <aside className="absolute inset-y-0 left-0 w-72 bg-white shadow-xl"
+                 onClick={(e) => e.stopPropagation()}>
+            <Sidebar page={page} tab={tab} onNavigate={goTo}
+                     alertCount={openAlerts.length} onClose={() => setMenu(false)} />
+          </aside>
         </div>
-      </header>
+      )}
 
-      <main className="px-4 py-8">
-        {loading ? (
-          <p className="text-center text-muted">Loading…</p>
-        ) : showForm ? (
-          <FarmForm
-            onCreated={async (farm) => {
-              setAdding(false)
-              await loadFarms()
-              setSelectedId(farm.id) // land on the farm just created
-            }}
-          />
-        ) : selected ? (
-          <Dashboard farm={selected} farmCount={farms.length} />
-        ) : null}
-      </main>
+      <div className="min-w-0 flex-1">
+        <TopBar
+          farms={farms}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          onAdd={() => setAdding(true)}
+          alerts={openAlerts}
+          email={session.user?.email}
+          onNavigate={goTo}
+          onMenu={() => setMenu(true)}
+        />
 
-      <footer className="px-4 pb-10 text-center text-xs text-muted">
-        Sentinel-2 · Google Earth Engine · Random Forest — FYP checkpoint build
-      </footer>
+        <main className="px-4 py-6 sm:px-6 lg:px-8">
+          {selected ? page_() : <p className="text-muted">Select a farm to continue.</p>}
+        </main>
+
+        <footer className="px-6 pb-10 pt-4 text-xs text-muted">
+          Sentinel-2 · Google Earth Engine · Random Forest — FYP checkpoint build
+        </footer>
+      </div>
+
+      <Modal
+        open={adding}
+        onClose={() => setAdding(false)}
+        title="Add farm"
+        sub="Add a field to start satellite monitoring. First results arrive within one imagery pass."
+      >
+        <FarmForm
+          chrome={false}
+          onCancel={() => setAdding(false)}
+          onCreated={async (farm) => {
+            setAdding(false)
+            await loadFarms()
+            setSelectedId(farm.id)   // land on the farm just created
+            goTo('dashboard')
+          }}
+        />
+      </Modal>
     </div>
   )
 }

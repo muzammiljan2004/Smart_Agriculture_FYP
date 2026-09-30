@@ -105,7 +105,15 @@ const field =
   'outline-none transition focus:border-leaf-400 focus:ring-4 focus:ring-leaf-400/15 ' +
   'disabled:bg-leaf-50/60 disabled:text-muted'
 
-export default function FarmForm({ onCreated }) {
+/** `chrome` controls the standalone framing only.
+ *
+ * The form is now reachable two ways: as the first-run page a farmer lands on
+ * with no farms, and as the Add Farm modal from anywhere in the app. The modal
+ * draws its own title and its own card, so it passes chrome={false} to drop
+ * the centred heading and the panel. Every field, every default and the whole
+ * submit path are shared -- there is one farm-creation code path, not two.
+ */
+export default function FarmForm({ onCreated, onCancel, chrome = true }) {
   const [form, setForm] = useState({
     farmer_name: '',
     district: 'Sheikhupura',
@@ -181,20 +189,23 @@ export default function FarmForm({ onCreated }) {
   }
 
   return (
-    <div className="mx-auto max-w-lg">
-      <div className="mb-6 text-center">
-        <span className="inline-flex items-center gap-2 rounded-full bg-leaf-100 px-3 py-1 text-xs font-medium text-leaf-700">
-          <span className="h-1.5 w-1.5 rounded-full bg-leaf-500" />
-          Step 1 of 1
-        </span>
-        <h2 className="mt-4 font-display text-3xl font-semibold">Register your farm</h2>
-        <p className="mt-2 text-sm text-muted">
-          We use the location to read your soil and climate, and to pull Sentinel-2
-          imagery for your plot.
-        </p>
-      </div>
+    <div className={chrome ? 'mx-auto max-w-lg' : ''}>
+      {chrome && (
+        <div className="mb-6 text-center">
+          <span className="inline-flex items-center gap-2 rounded-full bg-leaf-100 px-3 py-1 text-xs font-medium text-leaf-700">
+            <span className="h-1.5 w-1.5 rounded-full bg-leaf-500" />
+            Step 1 of 1
+          </span>
+          <h2 className="mt-4 font-display text-3xl font-semibold">Register your farm</h2>
+          <p className="mt-2 text-sm text-muted">
+            We use the location to read your soil and climate, and to pull Sentinel-2
+            imagery for your plot.
+          </p>
+        </div>
+      )}
 
-      <form onSubmit={submit} className="rounded-2xl bg-white p-7 shadow-sm ring-1 ring-leaf-100">
+      <form onSubmit={submit}
+            className={chrome ? 'rounded-2xl bg-white p-7 shadow-sm ring-1 ring-leaf-100' : ''}>
         <label className="block text-sm font-medium">
           Farmer name
           <input
@@ -338,13 +349,23 @@ export default function FarmForm({ onCreated }) {
           </p>
         )}
 
-        <button
-          type="submit" disabled={busy}
-          className="mt-7 w-full rounded-xl bg-leaf-700 py-3 font-medium text-white shadow-sm
-                     transition hover:bg-leaf-800 active:scale-[.99] disabled:opacity-60"
-        >
-          {busy ? 'Saving…' : 'Register farm'}
-        </button>
+        <div className={chrome ? 'mt-7' : 'mt-7 flex justify-end gap-2'}>
+          {onCancel && (
+            <button type="button" onClick={onCancel}
+                    className="rounded-xl border border-leaf-200 px-5 py-3 font-medium text-leaf-800
+                               transition hover:bg-leaf-50">
+              Cancel
+            </button>
+          )}
+          <button
+            type="submit" disabled={busy}
+            className={'rounded-xl bg-leaf-700 py-3 font-medium text-white shadow-sm transition ' +
+              'hover:bg-leaf-800 active:scale-[.99] disabled:opacity-60 ' +
+              (chrome ? 'w-full' : 'px-6')}
+          >
+            {busy ? 'Saving…' : chrome ? 'Register farm' : 'Create farm'}
+          </button>
+        </div>
       </form>
     </div>
   )
