@@ -2,11 +2,764 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Smart Agriculture — Farmer Portal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Smart Agriculture — Satellite Crop Yield Prediction for Punjab</title>
+    <meta
+      name="description"
+      content="Satellite remote sensing and machine-learning crop yield prediction for Punjab, Pakistan. 34 districts, 11 crops, 8 seasons. Separate portals for farmers, government and researchers."
+    />
+    <meta name="theme-color" content="#0e2c21" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- THE THIRD VITE ENTRY, AND THE ONLY ONE WITH NO SCRIPT TAG.
+         This page is a gateway: it fetches nothing, reads no session and holds
+         no state, so it ships no JavaScript at all. Every interactive part is a
+         native element -- <details> for the FAQ, anchors for the nav, CSS for
+         the scroll. Vite still processes the stylesheet below (hashed and
+         emitted at build) because this is a declared entry in vite.config.js.
+         The farmer app is at /farmer.html, the government portal at
+         /government.html. -->
+    <link rel="stylesheet" href="/src/landing/landing.css" />
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <a class="skip" href="#portals">Skip to portal selection</a>
+
+    <!-- ================================================================ nav -->
+    <nav class="nav" aria-label="Main">
+      <div class="wrap">
+        <a class="logo" href="#top">
+          <!-- The farmer portal's Logo.jsx mark, inlined with literal fills.
+               That component styles itself with Tailwind utility classes, which
+               only exist inside the farmer bundle -- this page has no Tailwind
+               and no React, so the colours are written out. -->
+          <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+            <circle cx="16" cy="16" r="15" fill="#1b4d35" />
+            <path d="M16 25c0-6 3-10 8-12-1 7-4 10-8 12z" fill="#7fb797" />
+            <path d="M16 25c0-6-3-10-8-12 1 7 4 10 8 12z" fill="#4f9a72" />
+            <path d="M16 26V15" stroke="#d7e9dd" stroke-width="1.4" stroke-linecap="round" fill="none" />
+            <circle cx="16" cy="9" r="2.2" fill="#ddb45c" />
+          </svg>
+          <span>Smart Agriculture</span>
+        </a>
+        <div class="navlinks">
+          <a href="#portals">Portals</a>
+          <a href="#how">How it works</a>
+          <a href="#platform">Platform</a>
+          <a href="#model">Model &amp; accuracy</a>
+          <a href="#data">Data</a>
+          <a href="#tech">Technology</a>
+          <a href="#access">Access</a>
+          <a href="#faq">FAQ</a>
+        </div>
+        <a class="navcta" href="#portals">Choose a portal</a>
+      </div>
+    </nav>
+
+    <!-- =============================================================== hero -->
+    <header class="hero" id="top">
+      <div class="wrap">
+        <span class="tag"><i></i>Final Year Project · Punjab, Pakistan</span>
+        <h1>Crop yield prediction from orbit</h1>
+        <p class="lede">
+          Satellite remote sensing and machine learning applied to Pakistan&rsquo;s
+          cropland &mdash; field-level monitoring for the people who grow, and
+          district-level analysis for the people who plan.
+        </p>
+        <p class="val">
+          Sentinel-1 radar and Sentinel-2 optical imagery pulled through Google
+          Earth Engine, a Random Forest trained on eight seasons of officially
+          reported district yields, and an early warning when a field&rsquo;s own
+          vegetation curve turns the wrong way.
+        </p>
+        <div class="herocta">
+          <a class="btn solid" href="#portals">Choose a portal</a>
+          <a class="btn ghost" href="#model">See the accuracy numbers</a>
+        </div>
+
+        <!-- Every figure below is counted from the shipped dataset and schema,
+             not rounded up for effect. If the data grows, these change. -->
+        <div class="stats">
+          <div class="stat"><b>34</b><span>Districts of Punjab covered</span></div>
+          <div class="stat"><b>11</b><span>Crops in the trained model</span></div>
+          <div class="stat"><b>8</b><span>Seasons, 2017&#8209;18 to 2024&#8209;25</span></div>
+          <div class="stat"><b>2,378</b><span>District × crop × season records</span></div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- ========================================================= portals -->
+      <section class="band" id="portals" aria-labelledby="portals-h">
+        <div class="wrap">
+          <div class="sechead">
+            <span class="eyebrow">Three audiences</span>
+            <h2 id="portals-h">Choose a portal</h2>
+            <p>
+              Each portal is a separate, independently authenticated area with its
+              own data access rules. There is no shared sign-in across them &mdash;
+              choosing one takes you to that portal&rsquo;s own login.
+            </p>
+          </div>
+
+          <div class="cards">
+            <!-- -------------------------------------------------- farmer -->
+            <article class="pcard" aria-labelledby="p-farmer">
+              <span class="pico" aria-hidden="true">
+                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 21V9" />
+                  <path d="M12 13c0-4 2.5-6.5 6-7.5-.5 5-3 7.5-6 7.5z" />
+                  <path d="M12 16c0-4-2.5-6.5-6-7.5.5 5 3 7.5 6 7.5z" />
+                </svg>
+              </span>
+              <h3 id="p-farmer">Farmer Portal</h3>
+              <p class="who">For registered farmers</p>
+              <p class="desc">
+                Track your own fields through the season and see what the satellite
+                record says about them.
+              </p>
+              <ul class="does">
+                <li>Satellite crop monitoring, field by field</li>
+                <li>Yield forecasts for your registered farms</li>
+                <li>Water-stress and irrigation alerts</li>
+                <li>Harvest-window detection and crop suitability</li>
+                <li>Downloadable per-farm reports</li>
+              </ul>
+              <div class="foot">
+                <hr class="sep" />
+                <a class="btn dark cta" href="/farmer.html">Enter Farmer Portal</a>
+                <small class="note">
+                  Open registration &middot; sign in or create an account. You see only
+                  your own farms &mdash; enforced by row-level security, not by the UI.
+                </small>
+              </div>
+            </article>
+
+            <!-- ---------------------------------------------- government -->
+            <article class="pcard" aria-labelledby="p-gov">
+              <span class="pico" aria-hidden="true">
+                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 21h18" />
+                  <path d="M4 21V10l8-5 8 5v11" />
+                  <path d="M9 21v-6h6v6" />
+                </svg>
+              </span>
+              <h3 id="p-gov">Government Portal</h3>
+              <p class="who">For policymakers &amp; officials</p>
+              <p class="desc">
+                District-level yield analysis across Punjab, for planning,
+                procurement and subsidy decisions.
+              </p>
+              <ul class="does">
+                <li>15 analytical screens across 34 districts</li>
+                <li>Yield forecasting, risk alerts and subsidy targeting</li>
+                <li>Three-tier access: admin, district manager, officer</li>
+                <li>Field survey returns from district staff</li>
+                <li>Read-only &mdash; no analytical table is client-writable</li>
+              </ul>
+              <div class="foot">
+                <hr class="sep" />
+                <a class="btn dark cta" href="/government.html">Enter Government Portal</a>
+                <small class="note">
+                  <span class="lock" aria-hidden="true">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+                  </span>
+                  Invite only &middot; no public sign-up. Accounts are issued by an
+                  administrator and scoped to one district.
+                </small>
+              </div>
+            </article>
+
+            <!-- ---------------------------------------------- researcher -->
+            <!-- NOT BUILT YET. The CTA is an aria-disabled span, not an <a> to
+                 /researcher.html: that entry point does not exist, so a link
+                 would 404 in production and this is the first page an evaluator
+                 sees. The path is reserved -- when the portal lands, add
+                 researcher.html beside farmer.html and government.html,
+                 register it in vite.config.js, and swap this span for an
+                 <a href> with class "btn dark cta". -->
+            <article class="pcard soon" aria-labelledby="p-res">
+              <span class="pico" aria-hidden="true">
+                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="6.5" />
+                  <path d="M20 20l-4.5-4.5" />
+                  <path d="M11 8v6M8 11h6" />
+                </svg>
+              </span>
+              <h3 id="p-res">Researcher Portal</h3>
+              <p class="who">For researchers <span class="chip info">Planned</span></p>
+              <p class="desc">
+                The dataset and the model behind the forecasts, with the evaluation
+                that says how far to trust them.
+              </p>
+              <ul class="does">
+                <li>Dataset access and export</li>
+                <li>Model training and evaluation runs</li>
+                <li>Per-crop and per-season performance analysis</li>
+                <li>Feature-ablation experiment results</li>
+              </ul>
+              <div class="foot">
+                <hr class="sep" />
+                <span class="btn cta" aria-disabled="true">Not yet available</span>
+                <small class="note">
+                  In development &middot; this portal has not been built. Until it
+                  exists, the evaluation lives in the project&rsquo;s
+                  <span class="mono">docs/</span> folder.
+                </small>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================= how -->
+      <section class="band alt" id="how" aria-labelledby="how-h">
+        <div class="wrap">
+          <div class="sechead">
+            <span class="eyebrow">Pipeline</span>
+            <h2 id="how-h">How it works</h2>
+            <p>
+              Four stages, from a satellite pass over a field to an alert in
+              somebody&rsquo;s hand. Nothing is simulated: every index is reduced
+              from real imagery over a real boundary.
+            </p>
+          </div>
+          <div class="steps">
+            <div class="step">
+              <span class="n">01</span>
+              <b>Observe</b>
+              <p>
+                Sentinel-2 optical and Sentinel-1 radar passes are reduced over each
+                field&rsquo;s own geometry in Google Earth Engine. A fully
+                cloud-masked scene is dropped rather than filled in &mdash; an
+                absence of observation is not an observation of nothing.
+              </p>
+            </div>
+            <div class="step">
+              <span class="n">02</span>
+              <b>Measure</b>
+              <p>
+                Five vegetation and moisture indices per observation &mdash; NDVI,
+                EVI, NDWI, SAVI and NBR &mdash; composited across the crop&rsquo;s
+                own growing window, then joined to district soil and weather.
+              </p>
+            </div>
+            <div class="step">
+              <span class="n">03</span>
+              <b>Predict</b>
+              <p>
+                A 500-tree Random Forest maps those indices to yield in maunds per
+                acre. The spread across individual trees is reported as the
+                interval, so a confident and an uncertain prediction do not look
+                alike.
+              </p>
+            </div>
+            <div class="step">
+              <span class="n">04</span>
+              <b>Warn</b>
+              <p>
+                Each field&rsquo;s curve is compared against its own history. A turn
+                consistent with water or heat stress raises an alert while there is
+                still a season left to act in.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================== platform -->
+      <section class="band" id="platform" aria-labelledby="platform-h">
+        <div class="wrap">
+          <div class="sechead">
+            <span class="eyebrow">Capabilities</span>
+            <h2 id="platform-h">Inside the platform</h2>
+            <p>
+              Eight screens on the farmer side, fifteen on the government side, over
+              one Postgres database with row-level security deciding who sees which
+              row.
+            </p>
+          </div>
+          <div class="feats">
+            <div class="feat">
+              <span class="ico" aria-hidden="true">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l3-8 4 16 3-8h6"/></svg>
+              </span>
+              <b>Vegetation time series</b>
+              <p>
+                Per-date NDVI, EVI, NDWI, SAVI and NBR for every registered field,
+                with the radar channels beside them and the sensor named on each
+                observation.
+              </p>
+            </div>
+            <div class="feat">
+              <span class="ico" aria-hidden="true">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15l-5-5L5 21"/><path d="M3 3h18v18H3z"/><circle cx="8.5" cy="8.5" r="1.6"/></svg>
+              </span>
+              <b>Field-level mapping</b>
+              <p>
+                Leaflet over satellite basemaps, with each farm drawn as the circle
+                the indices were actually reduced over &mdash; not a pin standing in
+                for a boundary.
+              </p>
+            </div>
+            <div class="feat">
+              <span class="ico" aria-hidden="true">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 110 20 10 10 0 010-20z"/><path d="M12 7v5l3.5 2"/></svg>
+              </span>
+              <b>Harvest-window detection</b>
+              <p>
+                The post-peak decline in a field&rsquo;s own NDVI curve, used to
+                flag a likely cut. Shown to growers as an indication, and
+                deliberately not aggregated into an official statistic until it is
+                validated.
+              </p>
+            </div>
+            <div class="feat">
+              <span class="ico" aria-hidden="true">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.2L2 18a1.8 1.8 0 001.6 2.8h16.8A1.8 1.8 0 0022 18L13.7 3.2a1.9 1.9 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+              </span>
+              <b>Risk &amp; stress alerts</b>
+              <p>
+                Drought, water-stress and heat signals raised per field and rolled
+                up per district, with the triggering observation attached so an
+                officer can check the reasoning.
+              </p>
+            </div>
+            <div class="feat">
+              <span class="ico" aria-hidden="true">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/></svg>
+              </span>
+              <b>District analytics</b>
+              <p>
+                Production and yield statistics, crop comparison, subsidy targeting
+                by water retention, and CSV export &mdash; across 34 districts and
+                eight reported seasons.
+              </p>
+            </div>
+            <div class="feat">
+              <span class="ico" aria-hidden="true">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M21 12a9 9 0 11-5.2-8.2"/></svg>
+              </span>
+              <b>Field survey returns</b>
+              <p>
+                District officers submit ground observations, scoped by the database
+                to their own district and their own user id. Those returns are what
+                will eventually validate the harvest detector.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================== model -->
+      <!-- THE HONEST SECTION, and the reason this page has one at all.
+           docs/step11_temporal_experiment.md records, in as many words, that the
+           pooled R² does NOT justify claiming "~93% accurate yield prediction",
+           because it is dominated by the yield-scale gap between crops. Printing
+           0.92 alone would be the exact claim that document warns against, so
+           the per-crop spread and the five negative crops are published beside
+           it. Numbers here come from the fixed-holdout tables in that file and
+           must be updated together with it. -->
+      <section class="band alt" id="model" aria-labelledby="model-h">
+        <div class="wrap">
+          <div class="sechead">
+            <span class="eyebrow">Evaluation</span>
+            <h2 id="model-h">The model, and how far to trust it</h2>
+            <p>
+              The production model is a median-composite Random Forest, held to a
+              fixed holdout of two unseen seasons. Both the headline figure and the
+              places it falls apart are published here, because a yield number a
+              government acts on should arrive with its own error bars.
+            </p>
+          </div>
+
+          <div class="specs" style="margin-bottom:18px">
+            <div class="spec">
+              <dt>Algorithm</dt>
+              <dd><span class="mono">RandomForestRegressor</span> &middot; 500 trees, max depth 25, seed 42</dd>
+            </div>
+            <div class="spec">
+              <dt>Features</dt>
+              <dd>5 median-composite indices + crop one-hot, joined to district soil &amp; weather</dd>
+            </div>
+            <div class="spec">
+              <dt>Training rows</dt>
+              <dd>2,378 district × crop × season records, 2017&#8209;18 to 2024&#8209;25</dd>
+            </div>
+            <div class="spec">
+              <dt>Validation</dt>
+              <dd>Fixed holdout on seasons 2021&#8209;22 and 2022&#8209;23, plus a time-aware split</dd>
+            </div>
+          </div>
+
+          <div class="tablewrap">
+            <table>
+              <caption class="sr-only">Pooled holdout metrics for the production model</caption>
+              <thead>
+                <tr><th>Pooled holdout metric</th><th class="num">Value</th><th>Reading</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><b>R²</b></td><td class="num">0.9212</td><td class="chip weak">Inflated by crop scale</td></tr>
+                <tr><td><b>RMSE</b></td><td class="num">5.6467</td><td>Maunds per acre</td></tr>
+                <tr><td><b>MAE</b></td><td class="num">2.8956</td><td>Maunds per acre</td></tr>
+                <tr><td><b>Wheat only, R²</b></td><td class="num">0.7176</td><td class="chip good">The defensible result</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="callout">
+            <b>Why the 0.92 is not an accuracy claim.</b>
+            Pooled across eleven crops whose yields differ by an order of magnitude,
+            R² mostly measures the model&rsquo;s ability to tell sugarcane from
+            wheat &mdash; not its skill within either. Per crop it ranges from
+            <span class="mono">+0.77</span> down to <span class="mono">&minus;0.72</span>,
+            and <b style="display:inline">five of eleven crops score below zero</b>,
+            meaning the model does worse than predicting that crop&rsquo;s own
+            average. Every row is a district average, so this is not field-level
+            accuracy either. Wheat is the one crop whose result survives a
+            time-aware split, and it is the crop the project claims.
+          </div>
+
+          <div class="tablewrap" style="margin-top:18px">
+            <table>
+              <caption class="sr-only">Per-crop holdout R², vegetation-only arm</caption>
+              <thead>
+                <tr><th>Crop</th><th class="num">Holdout R²</th><th>Verdict</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><b>Wheat</b></td><td class="num">0.7730</td><td><span class="chip good">Reliable</span></td></tr>
+                <tr><td>Jowar</td><td class="num">0.3807</td><td><span class="chip weak">Weak</span></td></tr>
+                <tr><td>Onion</td><td class="num">0.3308</td><td><span class="chip weak">Weak</span></td></tr>
+                <tr><td>Potato</td><td class="num">0.2607</td><td><span class="chip weak">Weak</span></td></tr>
+                <tr><td>Cotton</td><td class="num">0.2559</td><td><span class="chip weak">Weak</span></td></tr>
+                <tr><td>Sugarcane</td><td class="num">0.1739</td><td><span class="chip weak">Needs a longer window</span></td></tr>
+                <tr><td>Rice</td><td class="num">&minus;0.0453</td><td><span class="chip bad">Below baseline</span></td></tr>
+                <tr><td>Tomato</td><td class="num">&minus;0.1192</td><td><span class="chip bad">Below baseline</span></td></tr>
+                <tr><td>Barley</td><td class="num">&minus;0.1383</td><td><span class="chip bad">Below baseline</span></td></tr>
+                <tr><td>Maize</td><td class="num">&minus;0.1916</td><td><span class="chip bad">Below baseline</span></td></tr>
+                <tr><td>Bajra</td><td class="num">&minus;0.7197</td><td><span class="chip bad">Below baseline</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="note" style="margin-top:12px">
+            Figures from the fixed-holdout, vegetation-only arm of the feature-ablation
+            experiment recorded in <span class="mono">docs/step11_temporal_experiment.md</span>.
+            The production model remains the median-composite one: a promising temporal
+            variant was measured, documented and <em>not</em> shipped, because several
+            crops stayed weak.
+          </p>
+        </div>
+      </section>
+
+      <!-- ============================================================ data -->
+      <section class="band" id="data" aria-labelledby="data-h">
+        <div class="wrap">
+          <div class="sechead">
+            <span class="eyebrow">Provenance</span>
+            <h2 id="data-h">Where the data comes from</h2>
+            <p>
+              Four sources, each with a named origin. Nothing on this platform is
+              synthetic &mdash; where a figure does not exist, the screen that would
+              show it says so instead of filling the gap.
+            </p>
+          </div>
+          <div class="tablewrap">
+            <table>
+              <thead>
+                <tr><th>Layer</th><th>Source</th><th>Resolution / grain</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><b>Optical imagery</b></td>
+                  <td>Sentinel-2 surface reflectance via Google Earth Engine</td>
+                  <td>10&nbsp;m, per satellite pass</td>
+                </tr>
+                <tr>
+                  <td><b>Radar imagery</b></td>
+                  <td>Sentinel-1 C-band SAR (VV / VH) via Google Earth Engine</td>
+                  <td>Per pass, cloud-independent</td>
+                </tr>
+                <tr>
+                  <td><b>Reported yields</b></td>
+                  <td>Crop Reporting Service final estimates, Punjab</td>
+                  <td>District × crop × season</td>
+                </tr>
+                <tr>
+                  <td><b>Soil &amp; weather</b></td>
+                  <td>Per-district soil profile and seasonal temperature series</td>
+                  <td>District, seasonal aggregate</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout">
+            <b>Two screens in the government portal are deliberately empty.</b>
+            Crop-area estimation and harvest progress have no source data yet, so
+            they render their full layout and name the missing input rather than
+            displaying a plausible number. A missing value prints as an em dash,
+            never as zero, and a district with no reading is drawn grey on the map
+            rather than at the bottom of the colour ramp.
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ tech -->
+      <section class="band alt" id="tech" aria-labelledby="tech-h">
+        <div class="wrap">
+          <div class="sechead">
+            <span class="eyebrow">Architecture</span>
+            <h2 id="tech-h">Technology</h2>
+            <p>
+              Three parts: a browser front end that talks to Postgres directly for
+              plain reads and writes, a Python service that owns everything needing
+              Earth Engine or scikit-learn, and the database that enforces access.
+            </p>
+          </div>
+          <div class="specs">
+            <div class="spec">
+              <dt>Front end</dt>
+              <dd>React 18 &middot; Vite &middot; Tailwind v4 &middot; Leaflet</dd>
+            </div>
+            <div class="spec">
+              <dt>ML service</dt>
+              <dd>FastAPI &middot; scikit-learn &middot; Google Earth Engine &middot; 10 endpoints</dd>
+            </div>
+            <div class="spec">
+              <dt>Database</dt>
+              <dd>Supabase &middot; PostgreSQL &middot; PostGIS &middot; row-level security</dd>
+            </div>
+            <div class="spec">
+              <dt>Government schema</dt>
+              <dd>13 tables &middot; 4 helper functions &middot; 24 RLS policies</dd>
+            </div>
+          </div>
+          <p class="note" style="margin-top:14px">
+            Anything requiring Python lives in the ML service; anything that is a
+            plain table read goes straight to Postgres from the browser, so no CRUD
+            API exists that nobody needed. The service&rsquo;s privileged key never
+            reaches the browser bundle.
+          </p>
+        </div>
+      </section>
+
+      <!-- ========================================================== access -->
+      <section class="band" id="access" aria-labelledby="access-h">
+        <div class="wrap">
+          <div class="sechead">
+            <span class="eyebrow">Security</span>
+            <h2 id="access-h">Who can see what</h2>
+            <p>
+              Access is decided by the database, not by the interface. Hiding a
+              button is a presentation choice; a row-level security policy is the
+              thing that actually stops a request.
+            </p>
+          </div>
+          <div class="feats">
+            <div class="feat">
+              <span class="ico" aria-hidden="true">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6l8-4z"/></svg>
+              </span>
+              <b>Farmers see only their own farms</b>
+              <p>
+                Enforced by a policy on the farms table keyed to the signed-in user,
+                so a crafted request returns nothing rather than someone
+                else&rsquo;s field.
+              </p>
+            </div>
+            <div class="feat">
+              <span class="ico" aria-hidden="true">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0113 0"/><path d="M16 11.2A3.4 3.4 0 0017 4.6"/><path d="M18 20a6.5 6.5 0 00-2.2-4.9"/></svg>
+              </span>
+              <b>Three government tiers</b>
+              <p>
+                A super admin sees the province; a district manager sees one
+                district and its staff; an employee sees their district in the role
+                they were given. A manager cannot read another district.
+              </p>
+            </div>
+            <div class="feat">
+              <span class="ico" aria-hidden="true">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+              </span>
+              <b>No self-promotion</b>
+              <p>
+                There is no update policy letting anyone change their own tier or
+                district &mdash; not even the administrator. The escalation is
+                absent, not merely checked for.
+              </p>
+            </div>
+            <div class="feat">
+              <span class="ico" aria-hidden="true">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M7 21V8l5-4 5 4v13"/></svg>
+              </span>
+              <b>The government portal is read-only</b>
+              <p>
+                Yield predictions, satellite indices, risk alerts and subsidy
+                recommendations carry no write policy at any tier, so no official
+                can edit a figure the model produced.
+              </p>
+            </div>
+            <div class="feat">
+              <span class="ico" aria-hidden="true">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z"/><path d="M4 9h16"/><path d="M9 14h6"/></svg>
+              </span>
+              <b>No individual farm records cross over</b>
+              <p>
+                No role in the government portal can read a single row of the
+                farmers&rsquo; table. Officials see district aggregates; growers keep
+                their own data.
+              </p>
+            </div>
+            <div class="feat">
+              <span class="ico" aria-hidden="true">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M21 12a9 9 0 11-5.2-8.2"/></svg>
+              </span>
+              <b>57 boundary checks, all passing</b>
+              <p>
+                A verification script creates throwaway accounts across two
+                districts, signs in as a browser would, and asserts every boundary
+                from both sides &mdash; that the right rows are visible and the
+                wrong ones are not.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================= faq -->
+      <section class="band alt" id="faq" aria-labelledby="faq-h">
+        <div class="wrap">
+          <div class="sechead">
+            <span class="eyebrow">Questions</span>
+            <h2 id="faq-h">Frequently asked</h2>
+          </div>
+          <div class="faq">
+            <details>
+              <summary>Why do I need a separate login for each portal?</summary>
+              <p>
+                Because the three audiences have incompatible access rules. A farmer
+                account is self-registered and scoped to its own fields; a government
+                account is issued by an administrator and scoped to a district. Sharing
+                one sign-in would mean one account could hold both shapes, which is
+                exactly the escalation the schema is built to prevent.
+              </p>
+            </details>
+            <details>
+              <summary>Can I get a government account?</summary>
+              <p>
+                Not by signing up &mdash; the portal has no registration form at all.
+                Accounts are created by a super admin, who issues district managers;
+                each manager then creates the officers and analysts in their own
+                district.
+              </p>
+            </details>
+            <details>
+              <summary>Is the yield prediction accurate enough to act on?</summary>
+              <p>
+                For wheat, it is the result the project stands behind: R² around 0.72
+                on unseen seasons, and it holds up under a time-aware split where the
+                model never sees the future. For five of the eleven crops it currently
+                scores below zero, which means it is worse than guessing that
+                crop&rsquo;s average, and the portal says so rather than averaging it
+                away. Treat anything outside wheat as indicative.
+              </p>
+            </details>
+            <details>
+              <summary>Why is the prediction a district average rather than my field?</summary>
+              <p>
+                The only yields available to train on are the Crop Reporting
+                Service&rsquo;s district figures, so every training row is a district
+                average. The satellite indices <em>are</em> measured over your own
+                field boundary, which is what makes a per-field monitoring signal
+                meaningful &mdash; but the yield scale behind it is district-level, and
+                calling it field-level accuracy would overstate the evidence.
+              </p>
+            </details>
+            <details>
+              <summary>What happens when clouds cover my field?</summary>
+              <p>
+                That date is dropped from the optical series rather than filled in, so
+                a gap in the chart is a real gap in observation. Sentinel-1 radar flies
+                a different orbit and sees through cloud, so many dates still carry
+                radar readings with no vegetation index &mdash; those rows show the
+                radar values and leave NDVI empty rather than inventing one.
+              </p>
+            </details>
+            <details>
+              <summary>Which crops and districts are covered?</summary>
+              <p>
+                Thirty-four districts of Punjab, and eleven crops: wheat, rice, maize,
+                cotton, sugarcane, barley, bajra, jowar, potato, onion and tomato. The
+                district list is the one the pipeline actually fetched data for, so no
+                selector offers a district whose charts would come back empty.
+              </p>
+            </details>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ============================================================= footer -->
+    <footer>
+      <div class="wrap">
+        <div class="fgrid">
+          <div class="fabout">
+            <a class="logo" href="#top" style="color:var(--hero-ink);text-decoration:none">
+              <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true">
+                <circle cx="16" cy="16" r="15" fill="#2f7d57" />
+                <path d="M16 25c0-6 3-10 8-12-1 7-4 10-8 12z" fill="#b0d4bd" />
+                <path d="M16 25c0-6-3-10-8-12 1 7 4 10 8 12z" fill="#7fb797" />
+                <path d="M16 26V15" stroke="#eff6f1" stroke-width="1.4" stroke-linecap="round" fill="none" />
+                <circle cx="16" cy="9" r="2.2" fill="#ddb45c" />
+              </svg>
+              <span>Smart Agriculture</span>
+            </a>
+            <p>
+              Satellite-based crop yield prediction and agricultural monitoring for
+              Punjab, Pakistan. Built as a final year project.
+            </p>
+          </div>
+
+          <div>
+            <h4>Portals</h4>
+            <ul>
+              <li><a href="/farmer.html">Farmer Portal</a></li>
+              <li><a href="/government.html">Government Portal</a></li>
+              <li>Researcher Portal &mdash; planned</li>
+            </ul>
+          </div>
+
+          <div>
+            <h4>About</h4>
+            <ul>
+              <li><a href="#how">How it works</a></li>
+              <li><a href="#model">Model &amp; accuracy</a></li>
+              <li><a href="#data">Data sources</a></li>
+              <li><a href="#access">Access &amp; security</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4>Built with</h4>
+            <ul>
+              <li>Sentinel-1 / Sentinel-2</li>
+              <li>Google Earth Engine</li>
+              <li>scikit-learn Random Forest</li>
+              <li>React &middot; FastAPI &middot; PostgreSQL</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="fbot">
+          <!-- TODO(footer): team member names are not recorded anywhere in this
+               repository, so none are listed rather than guessed. Add them here
+               when they are settled. -->
+          <p>Final Year Project &middot; Air University, Islamabad</p>
+          <p>
+            Yields reported in maunds per acre &middot; imagery &copy; ESA Copernicus,
+            processed in Google Earth Engine
+          </p>
+        </div>
+      </div>
+    </footer>
   </body>
 </html>

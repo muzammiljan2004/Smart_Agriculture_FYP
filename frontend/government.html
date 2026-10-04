@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Smart Agriculture — Government Portal</title>
+    <meta name="description" content="Read-only district-level crop analytics for the Punjab Agriculture Department." />
+    <!-- Not indexable: a closed, invite-only portal has nothing to gain from a crawler. -->
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  </head>
+  <body>
+    <!-- A SECOND VITE ENTRY POINT, not a route inside the farmer app.
+         The two portals share the Supabase client and nothing else: different
+         audience, different stylesheet, different auth rules (this one has no
+         sign-up at all). Separate entries mean the farmer bundle does not grow
+         by a single byte, and no edit here can break a screen a grower uses. -->
+    <div id="root"></div>
+    <script type="module" src="/src/gov/main.jsx"></script>
+  </body>
+</html>

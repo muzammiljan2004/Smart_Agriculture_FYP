@@ -90,6 +90,18 @@ cp .env.example .env                              # fill in the values
 npm run dev                                       # http://localhost:5173
 ```
 
+Three pages are served, one per Vite entry point:
+
+| URL | What |
+|---|---|
+| `/` | Public landing page — picks a portal. No JS, no auth. |
+| `/farmer.html` | Farmer portal. Open sign-up. |
+| `/government.html` | Government portal. Invite only — see `docs/government_portal.md`. |
+
+The farmer app used to be at `/`; it moved to `/farmer.html` when the landing
+page took the root. A Researcher portal is planned and not built — `/` reserves
+`/researcher.html` for it.
+
 Run both at once — two terminals. The frontend expects ml-service on
 `VITE_ML_API_URL`.
 

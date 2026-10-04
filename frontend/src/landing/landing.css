@@ -1,0 +1,282 @@
+/* Landing page stylesheet — the public gateway at /.
+ *
+ * NO FRAMEWORK AND NO JS, deliberately. This page fetches nothing, checks no
+ * session and holds no state: it is prose, a stat band and three links.
+ * Mounting React to render that would ship a runtime to every first-time
+ * visitor (including evaluators) for markup that never changes. The two portals
+ * keep their own entries and their own bundles; this one has neither.
+ *
+ * It is ONE page with anchored sections rather than several HTML files. With no
+ * templating available -- no framework, no includes -- four pages would mean
+ * four hand-maintained copies of the nav and footer, and the fourth would drift
+ * from the first. The sticky nav makes the sections behave like pages.
+ *
+ * TOKENS ARE COPIED FROM gov.css, NOT IMPORTED. Importing it would pull the
+ * whole portal stylesheet -- the .app grid, the sidebar, Leaflet -- for a page
+ * with none of those, and would couple the public face of the project to an
+ * invite-only portal, where a layout edit could break this page. Only the token
+ * block is shared, so the three surfaces read as one product.
+ *
+ * If the tokens ever diverge, this file is the third place to update. That is
+ * the accepted cost of not coupling the pages.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Inter:wght@400;500;600&display=swap');
+
+:root{
+  --bg:#f1f2e9;--card:#fbfbf6;--line:#e1e4d6;--ink:#13261c;--mut:#6a796f;
+  --g900:#0e2c21;--g800:#15402f;--g700:#1d5c40;--g500:#3f8a5f;--g300:#9cc7a8;--g100:#d8e9dc;--g50:#eaf3ec;
+  --wheat:#c89a36;--amb:#c98a1c;--amb-bg:#fbeccb;--red:#b4342b;--red-bg:#f8e0dc;--blue:#2f6f9a;--blue-bg:#dcebf5;
+  --hero-ink:#eaf3ec;--hero-mut:#9fc3ad;
+  --serif:'Newsreader',Georgia,'Times New Roman',serif;
+  --sans:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0c1511;--card:#121f19;--line:#22342b;--ink:#e6efe9;--mut:#8fa498;
+    --g900:#1a4a37;--g800:#1f5a43;--g700:#3f8a5f;--g500:#5aa97b;--g300:#2f5f47;--g100:#1d3a2c;--g50:#162a21;
+    --amb-bg:#3d2f12;--red-bg:#40201c;--blue-bg:#16303f;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0c1511;--card:#121f19;--line:#22342b;--ink:#e6efe9;--mut:#8fa498;
+  --g900:#1a4a37;--g800:#1f5a43;--g700:#3f8a5f;--g500:#5aa97b;--g300:#2f5f47;--g100:#1d3a2c;--g50:#162a21;
+  --amb-bg:#3d2f12;--red-bg:#40201c;--blue-bg:#16303f;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.65 var(--sans);-webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4,p,ul,ol,dl,dd,dt,figure{margin:0}
+ul,ol{padding:0;list-style:none}
+a{color:inherit}
+.mono{font-family:var(--mono);font-size:.92em}
+
+/* A visitor who tabs in lands here first; it stays off-screen until focused. */
+.skip{position:absolute;left:-9999px}
+.skip:focus{
+  left:12px;top:12px;z-index:60;background:var(--card);color:var(--ink);
+  border:1px solid var(--g500);border-radius:8px;padding:9px 14px;text-decoration:none;
+}
+/* One shared focus ring. Never `outline:none` -- every CTA and nav item here is
+   a keyboard target and this is the only thing that shows where you are. */
+:is(a,button,summary):focus-visible{outline:2px solid var(--g500);outline-offset:3px;border-radius:8px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+
+/* Table <caption>s are for screen readers only -- the visible heading above
+   each table already names it, so showing both would read as a duplicate. */
+.sr-only{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;
+}
+
+/* ============================================================ section frame */
+section{scroll-margin-top:68px}          /* clears the sticky nav on anchor jump */
+.band{padding:56px 0}
+.band.alt{background:var(--card);border-block:1px solid var(--line)}
+.sechead{max-width:66ch;margin-bottom:26px}
+.eyebrow{
+  display:inline-block;font:500 11px var(--sans);letter-spacing:.14em;
+  text-transform:uppercase;color:var(--g700);margin-bottom:9px;
+}
+.sechead h2{font:500 clamp(23px,3.2vw,31px)/1.15 var(--serif);letter-spacing:-.015em}
+.sechead p{color:var(--mut);font-size:14.5px;margin-top:9px}
+
+/* ==================================================================== navbar */
+.nav{
+  position:sticky;top:0;z-index:50;
+  background:color-mix(in srgb,var(--bg) 90%,transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line);
+}
+.nav .wrap{display:flex;align-items:center;gap:18px;min-height:56px}
+.logo{display:flex;align-items:center;gap:9px;font-weight:600;font-size:14.5px;text-decoration:none;flex:none}
+.logo svg{flex:none}
+/* On a narrow screen the link row scrolls sideways instead of collapsing into a
+   burger -- a burger needs JS, and this page has none. */
+.navlinks{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;margin-right:auto}
+.navlinks::-webkit-scrollbar{display:none}
+.navlinks a{
+  padding:7px 11px;border-radius:8px;text-decoration:none;color:var(--mut);
+  font-size:13px;white-space:nowrap;transition:background .15s,color .15s;
+}
+.navlinks a:hover{background:var(--g50);color:var(--ink)}
+.navcta{
+  flex:none;background:var(--g900);color:var(--hero-ink);border:1px solid var(--g900);
+  border-radius:8px;padding:8px 14px;font:500 13px var(--sans);text-decoration:none;
+}
+.navcta:hover{background:var(--g800)}
+@media (max-width:620px){.navcta{display:none}}
+
+/* ====================================================================== hero */
+.hero{background:var(--g900);color:var(--hero-ink);padding:64px 0 0;overflow:hidden}
+.hero .tag{
+  display:inline-flex;align-items:center;gap:7px;background:rgba(234,243,236,.12);
+  color:#d5ead9;border-radius:20px;padding:5px 13px;font-size:12px;margin-bottom:22px;
+}
+.hero .tag i{width:6px;height:6px;border-radius:50%;background:#8fd0a6;flex:none}
+.hero h1{font:500 clamp(32px,6vw,56px)/1.06 var(--serif);letter-spacing:-.022em;max-width:20ch}
+.hero .lede{font-size:clamp(16px,2vw,19.5px);margin-top:18px;max-width:58ch;color:#dcebe0}
+.hero .val{color:var(--hero-mut);font-size:14.5px;margin-top:14px;max-width:64ch}
+.herocta{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}
+
+/* The stat band straddles the hero's bottom edge: half on the dark ground, half
+   on the page, which is what visually joins the two. */
+.stats{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;
+  margin-top:52px;background:var(--line);border:1px solid var(--line);
+  border-radius:12px 12px 0 0;overflow:hidden;transform:translateY(1px);
+}
+@media (max-width:760px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:var(--card);padding:16px 18px}
+.stat b{display:block;font:500 26px/1.1 var(--serif);color:var(--ink)}
+.stat span{display:block;color:var(--mut);font-size:12px;margin-top:4px}
+
+/* =================================================================== buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  border-radius:9px;padding:11px 18px;font:500 14px var(--sans);
+  text-decoration:none;cursor:pointer;border:1px solid transparent;transition:background .15s,border-color .15s;
+}
+.btn.solid{background:#eaf3ec;color:#0e2c21;border-color:#eaf3ec}
+.btn.solid:hover{background:#fff}
+.btn.ghost{border-color:rgba(234,243,236,.35);color:var(--hero-ink)}
+.btn.ghost:hover{border-color:#eaf3ec}
+.btn.dark{background:var(--g900);color:var(--hero-ink);border-color:var(--g900)}
+.btn.dark:hover{background:var(--g800)}
+.btn.line{border-color:var(--line);background:var(--card);color:var(--ink)}
+.btn.line:hover{border-color:var(--g500)}
+
+/* =================================================================== portals */
+.cards{display:grid;gap:14px;grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:940px){.cards{grid-template-columns:minmax(0,1fr)}}
+.pcard{
+  background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:22px 22px 20px;display:flex;flex-direction:column;min-width:0;
+  transition:border-color .15s;
+}
+/* No card-wide click handler: the <a> is the only target, which is what lets
+   this page work with zero JS. The card just reflects its link's state. */
+.pcard:hover{border-color:var(--g300)}
+.pcard:focus-within{border-color:var(--g500)}
+.pcard.soon{background:transparent;border-style:dashed}
+.pico{
+  width:40px;height:40px;border-radius:11px;background:var(--g100);color:var(--g700);
+  display:grid;place-items:center;margin-bottom:15px;
+}
+.pcard h3{font:600 18px/1.25 var(--sans)}
+.who{color:var(--mut);font-size:11.5px;margin-top:4px;text-transform:uppercase;letter-spacing:.07em}
+.pcard .desc{font-size:14px;margin-top:12px}
+.does{margin-top:14px;display:flex;flex-direction:column;gap:7px}
+.does li{display:flex;gap:9px;font-size:13.5px;color:var(--mut);line-height:1.5}
+.does li::before{content:"";flex:none;width:5px;height:5px;border-radius:50%;background:var(--g500);margin-top:8px}
+/* Pushes the CTA to the card's bottom so three cards of unequal prose still
+   line their buttons up. */
+.foot{margin-top:auto;padding-top:20px}
+.sep{border:0;border-top:1px solid var(--line);margin:0 0 15px}
+.cta{width:100%}
+.cta[aria-disabled="true"]{
+  background:transparent;color:var(--mut);border-color:var(--line);
+  border-style:dashed;cursor:not-allowed;
+}
+/* "Each portal has its own login" is the one thing a visitor must not have to
+   discover by clicking, so it sits under every CTA rather than once per page. */
+.note{display:block;color:var(--mut);font-size:11.5px;margin-top:10px;line-height:1.5}
+.lock{display:inline-flex;align-items:center;gap:5px;vertical-align:-2px}
+
+/* ======================================================================= how */
+.steps{display:grid;gap:16px;grid-template-columns:repeat(4,minmax(0,1fr));counter-reset:s}
+@media (max-width:980px){.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.steps{grid-template-columns:minmax(0,1fr)}}
+.step{border-top:2px solid var(--g300);padding-top:14px}
+.step .n{font:500 11.5px var(--mono);color:var(--g700);letter-spacing:.1em}
+.step b{display:block;font-size:15px;font-weight:600;margin-top:3px}
+.step p{color:var(--mut);font-size:13.5px;margin-top:6px}
+
+/* ================================================================ feature gr */
+.feats{display:grid;gap:14px;grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:940px){.feats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:620px){.feats{grid-template-columns:minmax(0,1fr)}}
+.feat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px}
+.band.alt .feat{background:var(--bg)}
+.feat .ico{width:32px;height:32px;border-radius:9px;background:var(--g100);color:var(--g700);display:grid;place-items:center;margin-bottom:12px}
+.feat b{display:block;font-size:14.5px;font-weight:600}
+.feat p{color:var(--mut);font-size:13.5px;margin-top:5px}
+
+/* ===================================================================== table */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.band.alt .tablewrap{background:var(--bg)}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:440px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line)}
+thead th{
+  font:500 11px var(--sans);letter-spacing:.09em;text-transform:uppercase;
+  color:var(--mut);background:var(--g50);
+}
+tbody tr:last-child :is(td,th){border-bottom:0}
+td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+td b{font-weight:600}
+
+/* Verdict chips for the per-crop table. Colour alone never carries the meaning
+   -- the number is right there in the adjacent cell. */
+.chip{display:inline-block;border-radius:20px;padding:2px 9px;font-size:11.5px;font-weight:500;white-space:nowrap}
+.chip.good{background:var(--g100);color:var(--g700)}
+.chip.weak{background:var(--amb-bg);color:#7d5a10}
+.chip.bad{background:var(--red-bg);color:var(--red)}
+.chip.info{background:var(--blue-bg);color:var(--blue)}
+
+/* ==================================================================== callout */
+.callout{
+  border:1px solid var(--line);border-left:3px solid var(--amb);
+  background:var(--amb-bg);color:#5d4310;border-radius:10px;
+  padding:15px 17px;font-size:13.5px;line-height:1.6;margin-top:18px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .callout{color:#e8c872;border-color:var(--line)}
+}
+.callout b{display:block;margin-bottom:4px;font-size:13.5px}
+
+/* ======================================================================= dl */
+.specs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+@media (max-width:760px){.specs{grid-template-columns:minmax(0,1fr)}}
+.spec{background:var(--card);padding:15px 17px}
+.band.alt .spec{background:var(--bg)}
+.spec dt{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--mut)}
+.spec dd{margin-top:5px;font-size:14px}
+.spec dd .mono{color:var(--g700)}
+
+/* ====================================================================== faq */
+.faq{display:flex;flex-direction:column;gap:9px;max-width:80ch}
+details{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:0 16px}
+.band.alt details{background:var(--bg)}
+summary{
+  cursor:pointer;padding:14px 0;font-weight:600;font-size:14px;
+  display:flex;align-items:center;gap:10px;list-style:none;
+}
+summary::-webkit-details-marker{display:none}
+/* The +/- is generated, so the disclosure state is visible with no JS. */
+summary::before{
+  content:"+";flex:none;width:19px;height:19px;border-radius:5px;background:var(--g100);
+  color:var(--g700);display:grid;place-items:center;font:600 13px var(--mono);
+}
+details[open] summary::before{content:"\2212"}
+details p{color:var(--mut);font-size:13.5px;padding:0 0 15px 29px}
+
+/* =================================================================== footer */
+footer{background:var(--g900);color:var(--hero-ink);margin-top:0}
+.fgrid{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:28px;padding:44px 0 32px}
+@media (max-width:860px){.fgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:520px){.fgrid{grid-template-columns:minmax(0,1fr);gap:22px}}
+.fgrid h4{font:500 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--hero-mut);margin-bottom:11px}
+.fgrid li{margin-bottom:7px;font-size:13.5px}
+.fgrid a{color:#dcebe0;text-decoration:none}
+.fgrid a:hover{text-decoration:underline}
+.fabout p{color:var(--hero-mut);font-size:13.5px;margin-top:11px;max-width:40ch}
+.fbot{
+  border-top:1px solid rgba(234,243,236,.14);padding:16px 0 28px;
+  display:flex;flex-wrap:wrap;gap:8px 22px;justify-content:space-between;align-items:baseline;
+}
+.fbot p{color:var(--hero-mut);font-size:12.5px}

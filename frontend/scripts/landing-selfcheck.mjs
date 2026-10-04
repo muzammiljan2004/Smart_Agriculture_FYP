@@ -1,0 +1,120 @@
+/**
+ * Landing-page selfcheck: every portal CTA points at a page that exists.
+ *
+ * The landing page is static markup, so there is no logic to unit-test -- but
+ * there is one thing that rots silently and is embarrassing in front of an
+ * evaluator: a CTA linking to an entry point that was renamed, removed or never
+ * registered in vite.config.js. The browser reports that as a 404 on the first
+ * click, and nothing before this check would have caught it.
+ *
+ * Run: node scripts/landing-selfcheck.mjs
+ */
+import { readFileSync, existsSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const fails = []
+const ok = (m) => console.log('  ok   ' + m)
+const check = (cond, m) => (cond ? ok(m) : (fails.push(m), console.log('  FAIL ' + m)))
+
+// Comments are stripped FIRST. index.html deliberately names /researcher.html
+// inside a comment (the reserved path for the unbuilt portal); counting that as
+// a live link would make this check fail on correct markup.
+const raw = readFileSync(resolve(root, 'index.html'), 'utf8')
+const html = raw.replace(/<!--[\s\S]*?-->/g, '')
+const config = readFileSync(resolve(root, 'vite.config.js'), 'utf8')
+
+console.log('\nlanding page links')
+
+const local = [...new Set([...html.matchAll(/href="(\/[^"#]*\.html)"/g)].map((m) => m[1]))]
+check(local.length > 0, 'the page links to at least one portal')
+
+for (const href of local) {
+  const file = href.replace(/^\//, '')
+  check(existsSync(resolve(root, file)), `${href} exists as a source entry`)
+  // An entry absent from rollupOptions.input is NOT built -- Vite silently
+  // ships only what is listed, so the file existing on disk is not enough.
+  check(config.includes(`'${file}'`), `${href} is registered in vite.config.js`)
+}
+
+// The nav and footer jump to sections by id. A renamed section leaves a link
+// that scrolls nowhere and reports nothing -- silent, and only noticed by
+// whoever clicks it.
+console.log('\nin-page anchors')
+const anchors = [...new Set([...html.matchAll(/href="#([^"]+)"/g)].map((m) => m[1]))]
+check(anchors.length > 0, 'the page has in-page navigation')
+for (const id of anchors) {
+  check(html.includes(`id="${id}"`), `#${id} resolves to a real element`)
+}
+// Every band is reachable from the nav, or it is a section nobody can find.
+const sections = [...html.matchAll(/<section class="band[^"]*" id="([^"]+)"/g)].map((m) => m[1])
+for (const id of sections) {
+  check(anchors.includes(id), `section #${id} is linked from the nav`)
+}
+
+console.log('\nthe unbuilt portal')
+check(!local.includes('/researcher.html'),
+  'no live link to /researcher.html while that portal does not exist')
+check(/aria-disabled="true"/.test(html),
+  'the researcher CTA is marked aria-disabled for screen readers')
+
+console.log('\nstatic by construction')
+check(!/<script/.test(html), 'the landing page ships no script tag')
+check(/rel="stylesheet"/.test(html), 'the landing stylesheet is linked')
+
+console.log('\naccessibility basics')
+check(/<main>/.test(html) && /<header/.test(html) && /<footer>/.test(html),
+  'semantic landmarks are present')
+check((html.match(/<h1>/g) || []).length === 1, 'exactly one h1')
+for (const id of [...html.matchAll(/aria-labelledby="([^"]+)"/g)].map((m) => m[1])) {
+  check(html.includes(`id="${id}"`), `aria-labelledby="${id}" resolves to a real element`)
+}
+check(/class="skip"/.test(html), 'a skip link is present')
+
+// THE HONESTY CHECK, and the reason this script is worth more than the link
+// checks above. The model section prints holdout figures transcribed from
+// docs/step11_temporal_experiment.md. If that document is ever re-run and the
+// numbers move, this page keeps quoting the old ones -- a stale accuracy claim
+// on the most public surface of the project, which is the single worst thing
+// this page could get wrong. So every 4-decimal figure on the page must still
+// appear in the document it came from.
+console.log('\nmodel figures match docs/')
+const docPath = resolve(root, '..', 'docs', 'step11_temporal_experiment.md')
+if (existsSync(docPath)) {
+  const doc = readFileSync(docPath, 'utf8')
+  const figures = [...new Set([...html.matchAll(/(?:>|&minus;)(\d\.\d{4})</g)].map((m) => m[1]))]
+  check(figures.length >= 15, `found ${figures.length} quoted figures to verify`)
+  for (const f of figures) {
+    check(doc.includes(f), `${f} appears in step11_temporal_experiment.md`)
+  }
+  check(/five of eleven crops score below zero/i.test(html),
+    'the five-negative-crops caveat is still on the page')
+  check(!/9[0-9]%\s*accur/i.test(html),
+    'no percentage accuracy claim (docs explicitly warn against one)')
+} else {
+  console.log('  --   skipped, docs/step11_temporal_experiment.md not found')
+}
+
+// The headline stat band counts real rows. An expanded dataset makes it stale.
+const csv = resolve(root, '..', 'ml-service', 'data', 'training_data_real.csv')
+if (existsSync(csv)) {
+  const rows = readFileSync(csv, 'utf8').trimEnd().split('\n').length - 1 // minus header
+  const claimed = Number((html.match(/<b>([\d,]+)<\/b><span>District × crop/) || [])[1]?.replace(/,/g, ''))
+  check(claimed === rows, `stat band claims ${claimed} records, dataset has ${rows}`)
+}
+
+// If a build is present, confirm the links resolve there too -- that is the
+// artefact actually served, and the only place a missing entry shows up.
+const dist = resolve(root, 'dist')
+if (existsSync(resolve(dist, 'index.html'))) {
+  console.log('\nbuilt output (dist/)')
+  for (const href of local) {
+    check(existsSync(resolve(dist, href.replace(/^\//, ''))), `dist${href} was built`)
+  }
+} else {
+  console.log('\nbuilt output (dist/)\n  --   skipped, no dist yet (run npm run build)')
+}
+
+console.log(fails.length ? `\n${fails.length} CHECK(S) FAILED` : '\nALL CHECKS PASSED')
+process.exit(fails.length ? 1 : 0)
