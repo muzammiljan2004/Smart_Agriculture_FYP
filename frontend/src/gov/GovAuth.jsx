@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../supabase'
-import Icon from './lib/icons'
+import AuthShell, { AuIcon, AuthAlert, AuthField, AuthNote, AuthSubmit } from '../auth/AuthShell'
 
 /**
  * Sign-in only. There is NO sign-up on this screen and no route to one.
@@ -10,7 +10,7 @@ import Icon from './lib/icons'
  * registration form would let anyone with the URL create an account that then
  * needs manually deleting. The farmer portal's Auth.jsx does offer sign-up,
  * which is why this is a separate component rather than a reused one -- the two
- * have opposite requirements.
+ * have opposite requirements. (They share only the visual frame, AuthShell.)
  *
  * Signing in with a Supabase account that has no gov_profiles row succeeds at
  * the auth layer and is then stopped by GovApp, which says so plainly. Leaking
@@ -34,44 +34,43 @@ export default function GovAuth() {
   }
 
   return (
-    <div className="auth-bg" style={{
-      minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 20,
-    }}>
-      <div className="card" style={{ width: '100%', maxWidth: 400, padding: '26px 24px' }}>
-        <div className="brand" style={{ paddingBottom: 14 }}>
-          <i><Icon name="leaf" size={13} /></i>
-          Smart Agriculture
-        </div>
-        <h1 style={{ font: '700 22px var(--display)', marginBottom: 4 }}>Government Portal</h1>
-        <p className="sub" style={{ marginBottom: 18 }}>
-          Punjab Agriculture Department · authorised accounts only
-        </p>
+    <AuthShell
+      portal="gov"
+      eyebrow="Government Portal"
+      title="District insight,"
+      accent="province-wide."
+      lead="Read-only, district-level yield analysis across Punjab — for planning, procurement and subsidy decisions."
+      points={[
+        '15 analytical screens across 34 districts',
+        'Yield forecasting, risk alerts and subsidy targeting',
+        'Three-tier access: admin, district manager, officer',
+      ]}
+      stats={[['34', 'districts'], ['11', 'crops'], ['8', 'seasons']]}
+    >
+      <span className="au-badge"><AuIcon name="lock" size={13} />Invite only</span>
+      <h2>Sign in</h2>
+      <p className="au-sub">Punjab Agriculture Department · authorised accounts only</p>
 
-        <form onSubmit={submit}>
-          <div className="field">
-            <label htmlFor="gov-email">Official email</label>
-            <input id="gov-email" type="email" required autoComplete="username"
-                   value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <div className="field">
-            <label htmlFor="gov-pass">Password</label>
-            <input id="gov-pass" type="password" required autoComplete="current-password"
-                   value={password} onChange={(e) => setPassword(e.target.value)} />
-          </div>
+      <form onSubmit={submit} className="au-form">
+        <AuthField
+          id="gov-email" label="Official email" icon="mail" type="email" required autoComplete="username"
+          value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@agripunjab.gov.pk"
+        />
+        <AuthField
+          id="gov-pass" label="Password" icon="lock" type="password" required autoComplete="current-password"
+          value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Your password"
+        />
 
-          {err && <div className="err" style={{ marginBottom: 10 }}><b>Sign-in failed.</b>{err}</div>}
+        {err && <AuthAlert title="Sign-in failed.">{err}</AuthAlert>}
 
-          <button className="btn dark" type="submit" disabled={busy} style={{ width: '100%' }}>
-            {busy ? 'Signing in…' : 'Sign in'}
-          </button>
-        </form>
+        <AuthSubmit busy={busy} busyLabel="Signing in…">Sign in</AuthSubmit>
+      </form>
 
-        <p className="prov" style={{ marginTop: 14 }}>
-          Accounts are issued by your district manager or the provincial administrator.
-          There is no self-registration. If you cannot sign in, ask whoever provisioned
-          your account to check that it is still active.
-        </p>
-      </div>
-    </div>
+      <AuthNote>
+        Accounts are issued by your district manager or the provincial administrator.
+        There is no self-registration. If you cannot sign in, ask whoever provisioned
+        your account to check that it is still active.
+      </AuthNote>
+    </AuthShell>
   )
 }

@@ -126,7 +126,7 @@ export function ConfusionMatrix({ cm }) {
                 return (
                   <td key={j} className={i === j ? 'diag' : ''}
                       style={i === j && share > 0
-                        ? { background: `rgba(63,138,95,${0.08 + share * 0.3})` }
+                        ? { background: `rgba(26,127,75,${0.1 + share * 0.32})` }
                         : undefined}>
                     {v}
                   </td>

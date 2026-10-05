@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../supabase'
-import Icon from '../gov/lib/icons'
+import AuthShell, { AuIcon, AuthAlert, AuthField, AuthNote, AuthSubmit } from '../auth/AuthShell'
 
 /**
  * Sign-in only. There is NO sign-up on this screen and no route to one.
@@ -10,6 +10,7 @@ import Icon from '../gov/lib/icons'
  * self-registration form would let anyone with the URL create an account that
  * then needs manually deleting. The farmer portal's Auth.jsx does offer
  * sign-up, which is why this is a separate component rather than a shared one.
+ * (They share only the visual frame, AuthShell.)
  *
  * Signing in with a Supabase account that has no research_profiles row succeeds
  * at the auth layer and is then stopped by ResearchApp, which says so plainly.
@@ -32,47 +33,43 @@ export default function ResearchAuth() {
   }
 
   return (
-    <div className="auth-bg" style={{
-      minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 20,
-    }}>
-      <div className="card" style={{ width: '100%', maxWidth: 400, padding: '26px 24px' }}>
-        <div className="brand" style={{ paddingBottom: 14 }}>
-          <i><Icon name="leaf" size={13} /></i>
-          Smart Agriculture
-        </div>
-        <h1 style={{ font: '700 22px var(--display)', marginBottom: 4 }}>Researcher Portal</h1>
-        <p className="sub" style={{ marginBottom: 18 }}>
-          Dataset access and model evaluation · authorised accounts only
-        </p>
+    <AuthShell
+      portal="res"
+      eyebrow="Researcher Portal"
+      title="Data and models,"
+      accent="under the microscope."
+      lead="The dataset and the model behind the forecasts, with the evaluation that says how far to trust them."
+      points={[
+        'Dataset explorer and versioned snapshots',
+        'Train, retrain and evaluate model versions',
+        'Per-crop performance and feature importance',
+      ]}
+      stats={[['2,378', 'records'], ['11', 'crops'], ['8', 'seasons']]}
+    >
+      <span className="au-badge"><AuIcon name="lock" size={13} />Invite only</span>
+      <h2>Sign in</h2>
+      <p className="au-sub">Dataset access and model evaluation · authorised accounts only</p>
 
-        <form onSubmit={submit}>
-          <div className="field">
-            <label htmlFor="res-email">Email</label>
-            <input id="res-email" type="email" required autoComplete="username"
-                   value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <div className="field">
-            <label htmlFor="res-pass">Password</label>
-            <input id="res-pass" type="password" required autoComplete="current-password"
-                   value={password} onChange={(e) => setPassword(e.target.value)} />
-          </div>
+      <form onSubmit={submit} className="au-form">
+        <AuthField
+          id="res-email" label="Email" icon="mail" type="email" required autoComplete="username"
+          value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@university.edu.pk"
+        />
+        <AuthField
+          id="res-pass" label="Password" icon="lock" type="password" required autoComplete="current-password"
+          value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Your password"
+        />
 
-          {err && (
-            <p style={{ color: 'var(--red)', fontSize: 12, margin: '2px 0 12px' }}>{err}</p>
-          )}
+        {err && <AuthAlert title="Sign-in failed.">{err}</AuthAlert>}
 
-          <button className="btn dark" type="submit" disabled={busy}
-                  style={{ width: '100%', justifyContent: 'center' }}>
-            {busy ? 'Signing in…' : 'Sign in'}
-          </button>
-        </form>
+        <AuthSubmit busy={busy} busyLabel="Signing in…">Sign in</AuthSubmit>
+      </form>
 
-        <p className="prov" style={{ marginTop: 16 }}>
-          Accounts are issued by a research lead or the platform administrator.
-          There is no self-registration. If you cannot sign in, ask the lead who
-          provisioned your account.
-        </p>
-      </div>
-    </div>
+      <AuthNote>
+        Accounts are issued by a research lead or the platform administrator.
+        There is no self-registration. If you cannot sign in, ask the lead who
+        provisioned your account.
+      </AuthNote>
+    </AuthShell>
   )
 }

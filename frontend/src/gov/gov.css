@@ -128,19 +128,34 @@ tr:last-child td{border-bottom:0}
 tbody tr.clk{cursor:pointer}tbody tr.clk:hover td{background:var(--g50)}tbody tr.sel td{background:var(--g100)}
 .tw{overflow-x:auto}
 .r-{text-align:right}.mono{font-variant-numeric:tabular-nums}
-.hr{display:grid;grid-template-columns:110px 1fr 64px;gap:8px;align-items:center;padding:4px 0;font-size:11.5px}
-.hr .t{height:7px;background:var(--g50);border-radius:6px;overflow:hidden;border:1px solid var(--line)}
-.hr .t i{display:block;height:100%;background:var(--g500);border-radius:6px}
+.hr{display:grid;grid-template-columns:minmax(80px,150px) 1fr 64px;gap:12px;align-items:center;padding:5px 0;font-size:12px}
+.hr>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hr .t{height:8px;background:var(--g50);border-radius:99px;overflow:hidden}
+.hr .t i{display:block;height:100%;background:linear-gradient(90deg,var(--g300),var(--g500));border-radius:99px;transition:width .4s ease}
 .hr .n{text-align:right;color:var(--mut)}
 .hero .hr .t{background:var(--card)}.hero .hr .t i{background:var(--g500)}
 .stages{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:5px}
 .stages div{font-size:10.5px;color:var(--mut)}
 .stages div i{display:block;height:5px;border-radius:5px;background:var(--g100);margin-bottom:5px}
 .stages div.done i{background:var(--g500)}.stages div.cur i{background:var(--g700)}.stages div.cur{color:var(--ink);font-weight:600}
-.chart{width:100%;height:auto;display:block}
-.gl{stroke:var(--line);stroke-width:1}.at{fill:var(--mut);font-size:10px}
-.leg{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--mut);margin-top:8px}
-.leg i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+/* Charts draw at their container's measured pixel width (lib/charts.jsx), so
+   these sizes are real sizes, not sizes that scale with the card. */
+.chart-wrap{position:relative;width:100%;min-width:0}
+.chart{width:100%;display:block;overflow:visible}
+.gl{stroke:var(--line);stroke-width:1;stroke-dasharray:3 4}.gl.base{stroke-dasharray:none;stroke:color-mix(in srgb,var(--mut) 35%,var(--line))}
+.at{fill:var(--mut);font-size:11px;font-family:var(--sans)}
+.at.val{fill:var(--ink);font-weight:600;font-size:10.5px}
+.colhit{fill:transparent}.colhi{fill:var(--g50)}
+/* Chart tooltip: a small white card with a coloured dot per series. */
+.ctip{position:absolute;top:0;z-index:5;pointer-events:none;white-space:nowrap;
+  background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;
+  padding:7px 10px;font-size:11.5px;line-height:1.5;box-shadow:0 6px 20px -6px rgba(15,35,24,.25)}
+.ctip b{display:block;font-weight:700;margin-bottom:2px}
+.ctip-row{display:flex;align-items:center;gap:6px;color:var(--mut)}
+.ctip-row i{width:8px;height:8px;border-radius:50%;flex:none}
+.ctip-row strong{color:var(--ink);font-weight:600}
+.leg{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--mut);margin-top:10px}
+.leg i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:-1px}
 .list-row{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line)}.list-row:last-child{border-bottom:0}
 .list-row .grow{flex:1;min-width:0}.list-row p{color:var(--mut);margin-top:2px;font-size:11.5px}
 .toggle{width:30px;height:17px;border-radius:10px;background:var(--line);border:0;position:relative;cursor:pointer;flex:none;transition:background .15s}
@@ -220,10 +235,3 @@ input[type=range]{accent-color:var(--g500);width:100%}
 /* Provenance strip. Each screen states where its numbers came from, including
    when the answer is "a model fit to data it was trained on". */
 .prov{color:var(--mut);font-size:10.5px;margin-top:8px;line-height:1.5}
-
-/* Sign-in screens: the landing page's soft emerald and wheat washes behind the
-   card, so the step from / to a portal login does not change visual language. */
-.auth-bg{background:
-  radial-gradient(50% 45% at 50% 0%,color-mix(in srgb,var(--g100) 80%,transparent) 0%,transparent 75%),
-  radial-gradient(35% 35% at 92% 85%,var(--wheat-bg) 0%,transparent 70%),
-  var(--bg)}

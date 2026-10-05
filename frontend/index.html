@@ -23,6 +23,14 @@
   </head>
   <body>
     <a class="skip" href="#portals">Skip to portal selection</a>
+    <!-- THEME SWITCH WITHOUT JAVASCRIPT. This checkbox is the control; the
+         stylesheet swaps every colour token under html:has(#theme:checked), and
+         the label in the nav is its visible face. It sits before the nav so the
+         nav's focus ring can follow it with a sibling selector. Not persisted:
+         remembering it would need a script, and this page ships none. -->
+    <input class="theme-input" type="checkbox" id="theme" aria-label="Dark green theme" />
+    <!-- Reading-progress hairline, driven by the scroll position in CSS. -->
+    <div class="progress" aria-hidden="true"></div>
 
     <!-- ================================================================ nav -->
     <nav class="nav" aria-label="Main">
@@ -50,12 +58,20 @@
           <a href="#access">Access</a>
           <a href="#faq">FAQ</a>
         </div>
+        <label class="theme-toggle" for="theme" title="Switch light / dark green theme">
+          <span class="tt-knob" aria-hidden="true">
+            <svg class="tt-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+            <svg class="tt-moon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 14.6A8.5 8.5 0 019.4 3.5a8.5 8.5 0 1011.1 11.1z"/></svg>
+          </span>
+        </label>
         <a class="navcta" href="#portals">Choose a portal</a>
       </div>
     </nav>
 
     <!-- =============================================================== hero -->
     <header class="hero" id="top">
+      <!-- Three soft colour glows that drift slowly behind the hero. -->
+      <div class="glows" aria-hidden="true"><i></i><i></i><i></i></div>
       <div class="wrap">
         <div class="herocopy">
           <h1>Crop yield prediction <em>from orbit</em></h1>
@@ -120,7 +136,7 @@
                   </defs>
                   <path class="c-grid" d="M0 30H300M0 60H300M0 90H300" />
                   <path class="c-fill" d="M0 92 C 50 90, 80 70, 120 40 S 180 12, 205 22 S 260 80, 300 88 L300 110 L0 110Z" />
-                  <path class="c-line" d="M0 92 C 50 90, 80 70, 120 40 S 180 12, 205 22 S 260 80, 300 88" />
+                  <path class="c-line" pathLength="1" d="M0 92 C 50 90, 80 70, 120 40 S 180 12, 205 22 S 260 80, 300 88" />
                   <circle class="c-dot" cx="178" cy="17" r="4" />
                 </svg>
                 <div class="pv-axis"><span>Sowing</span><span>Peak</span><span>Harvest</span></div>
@@ -371,9 +387,9 @@
               </p>
               <!-- decorative: five index lines, no values -->
               <svg class="spark" viewBox="0 0 320 70" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-                <path class="s1" d="M0 60 C 60 58, 90 30, 140 18 S 220 20, 250 40 S 300 58, 320 60" />
-                <path class="s2" d="M0 64 C 60 62, 100 42, 150 30 S 220 32, 255 48 S 300 62, 320 64" />
-                <path class="s3" d="M0 52 C 50 52, 90 44, 140 40 S 220 34, 260 44 S 300 54, 320 54" />
+                <path class="s1" pathLength="1" d="M0 60 C 60 58, 90 30, 140 18 S 220 20, 250 40 S 300 58, 320 60" />
+                <path class="s2" pathLength="1" d="M0 64 C 60 62, 100 42, 150 30 S 220 32, 255 48 S 300 62, 320 64" />
+                <path class="s3" pathLength="1" d="M0 52 C 50 52, 90 44, 140 40 S 220 34, 260 44 S 300 54, 320 54" />
               </svg>
             </div>
             <div class="feat tall">
