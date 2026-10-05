@@ -128,27 +128,27 @@ export default function NdviChart({ points, sownDate }) {
         {Y_TICKS.map((v) => (
           <g key={v}>
             <line x1={M.left} x2={M.left + PW} y1={y(v)} y2={y(v)}
-                  stroke="#d7e9dd" strokeWidth="1" />
-            <text x={M.left - 10} y={y(v) + 4} textAnchor="end" fontSize="12" fill="#6c7a71">
+                  stroke="#dcf2e4" strokeWidth="1" />
+            <text x={M.left - 10} y={y(v) + 4} textAnchor="end" fontSize="12" fill="#66756b">
               {v.toFixed(2)}
             </text>
           </g>
         ))}
-        <line x1={M.left} x2={M.left} y1={M.top} y2={M.top + PH} stroke="#b0d4bd" strokeWidth="1" />
-        <text x={12} y={M.top + PH / 2} fontSize="12" fill="#6c7a71" textAnchor="middle"
+        <line x1={M.left} x2={M.left} y1={M.top} y2={M.top + PH} stroke="#bfe5cc" strokeWidth="1" />
+        <text x={12} y={M.top + PH / 2} fontSize="12" fill="#66756b" textAnchor="middle"
               transform={`rotate(-90 12 ${M.top + PH / 2})`}>NDVI</text>
 
         {/* X axis */}
         <line x1={M.left} x2={M.left + PW} y1={M.top + PH} y2={M.top + PH}
-              stroke="#b0d4bd" strokeWidth="1" />
+              stroke="#bfe5cc" strokeWidth="1" />
         {ticks.map((t) => (
           <g key={t.t}>
             {!t.partial && (
               <line x1={x(t.t)} x2={x(t.t)} y1={M.top + PH} y2={M.top + PH + 5}
-                    stroke="#b0d4bd" strokeWidth="1" />
+                    stroke="#bfe5cc" strokeWidth="1" />
             )}
             <text x={x(t.t)} y={M.top + PH + 19}
-                  textAnchor={t.partial ? 'start' : 'middle'} fontSize="12" fill="#6c7a71">
+                  textAnchor={t.partial ? 'start' : 'middle'} fontSize="12" fill="#66756b">
               {t.label}
             </text>
             {t.year && (
@@ -164,13 +164,13 @@ export default function NdviChart({ points, sownDate }) {
         {sownT != null && sownT >= t0 && sownT <= t1 && (
           <g>
             <line x1={x(sownT)} x2={x(sownT)} y1={M.top} y2={M.top + PH}
-                  stroke="#c89a36" strokeWidth="1" strokeDasharray="4 4" />
-            <text x={x(sownT) + 5} y={M.top + 12} fontSize="11" fill="#c89a36">sown</text>
+                  stroke="#b9821c" strokeWidth="1" strokeDasharray="4 4" />
+            <text x={x(sownT) + 5} y={M.top + 12} fontSize="11" fill="#b9821c">sown</text>
           </g>
         )}
 
-        <path d={area} fill="#2f7d57" opacity="0.10" />
-        <path d={line} fill="none" stroke="#1b4d35" strokeWidth="2.2"
+        <path d={area} fill="#2f9a62" opacity="0.10" />
+        <path d={line} fill="none" stroke="#1a7f4b" strokeWidth="2.2"
               strokeLinejoin="round" strokeLinecap="round" />
 
         {/* Every observation is a point, so the reader can see where a reading
@@ -178,15 +178,15 @@ export default function NdviChart({ points, sownDate }) {
             most of the field was cloud-masked on that date. */}
         {pts.map((p) => (
           <circle key={p.date} cx={x(p.t)} cy={y(p.ndvi)} r={thin(p) ? 3.4 : 2.6}
-                  fill={thin(p) ? '#fff' : '#1b4d35'}
-                  stroke={thin(p) ? '#c89a36' : 'none'} strokeWidth="1.6" />
+                  fill={thin(p) ? '#fff' : '#1a7f4b'}
+                  stroke={thin(p) ? '#b9821c' : 'none'} strokeWidth="1.6" />
         ))}
 
         {hover && (
           <g pointerEvents="none">
-            <line x1={hx} x2={hx} y1={M.top} y2={M.top + PH} stroke="#1b4d35"
+            <line x1={hx} x2={hx} y1={M.top} y2={M.top + PH} stroke="#1a7f4b"
                   strokeWidth="1" strokeDasharray="3 3" opacity="0.5" />
-            <circle cx={hx} cy={hy} r="5.5" fill="#1b4d35" stroke="#fff" strokeWidth="2" />
+            <circle cx={hx} cy={hy} r="5.5" fill="#1a7f4b" stroke="#fff" strokeWidth="2" />
           </g>
         )}
       </svg>
@@ -197,7 +197,7 @@ export default function NdviChart({ points, sownDate }) {
       {hover && (
         <div
           className="pointer-events-none absolute z-10 w-max -translate-x-1/2 -translate-y-full
-                     rounded-xl bg-leaf-900 px-3 py-2 text-xs text-leaf-50 shadow-lg"
+                     rounded-xl bg-white px-3 py-2 text-xs text-ink shadow-lg ring-1 ring-leaf-100"
           style={{ left: `${(hx / W) * 100}%`, top: `calc(${(hy / H) * 100}% - 10px)` }}
         >
           <p className="font-semibold">{fmtDate(hover.date)}</p>
@@ -205,20 +205,20 @@ export default function NdviChart({ points, sownDate }) {
             NDVI <span className="font-semibold">{hover.ndvi.toFixed(4)}</span>
           </p>
           {['evi', 'ndwi', 'savi', 'nbr'].some((k) => hover[k] != null) && (
-            <p className="tnum mt-0.5 text-leaf-300">
+            <p className="tnum mt-0.5 text-muted">
               {['evi', 'ndwi', 'savi', 'nbr']
                 .filter((k) => hover[k] != null)
                 .map((k) => `${k.toUpperCase()} ${hover[k].toFixed(3)}`)
                 .join(' · ')}
             </p>
           )}
-          <p className="tnum mt-1 text-leaf-300">
+          <p className="tnum mt-1 text-muted">
             {hover.cloud_pct != null && `cloud ${hover.cloud_pct}%`}
             {hover.valid_px != null && ` · ${hover.valid_px} px`}
             {hover.source && ` · ${hover.source}`}
           </p>
           {thin(hover) && (
-            <p className="mt-1 max-w-[15rem] text-wheat-300">
+            <p className="mt-1 max-w-60 text-wheat-500">
               Most of the field was cloud-masked on this date — this reading comes from a
               fraction of it.
             </p>

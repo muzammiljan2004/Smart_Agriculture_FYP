@@ -1,29 +1,34 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
+/* Same type and palette as the landing page (src/landing/landing.css), so the
+   portal reads as the next page of the same product. */
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-accent: "Instrument Serif", ui-serif, Georgia, serif;
 
-  --color-canvas: #f5f6f1;
-  --color-ink: #14231a;
-  --color-muted: #6c7a71;
+  --color-canvas: #fbfcf8;
+  --color-ink: #0f2318;
+  --color-muted: #66756b;
 
-  --color-leaf-50:  #eff6f1;
-  --color-leaf-100: #d7e9dd;
-  --color-leaf-200: #b0d4bd;
-  --color-leaf-300: #7fb797;
-  --color-leaf-400: #4f9a72;
-  --color-leaf-500: #2f7d57;
-  --color-leaf-600: #236344;
-  --color-leaf-700: #1b4d35;
-  --color-leaf-800: #143a28;
-  --color-leaf-900: #0d271b;
+  --color-leaf-50:  #effaf3;
+  --color-leaf-100: #dcf2e4;
+  --color-leaf-200: #bfe5cc;
+  --color-leaf-300: #93d1aa;
+  --color-leaf-400: #5cb684;
+  --color-leaf-500: #2f9a62;
+  --color-leaf-600: #228a54;
+  --color-leaf-700: #1a7f4b;
+  --color-leaf-800: #13653b;
+  --color-leaf-900: #0f3b25;
 
-  --color-wheat-300: #ecd08a;
-  --color-wheat-400: #ddb45c;
-  --color-wheat-500: #c89a36;
+  --color-wheat-50:  #fdf6e6;
+  --color-wheat-100: #f7e6bd;
+  --color-wheat-300: #ecc979;
+  --color-wheat-400: #d9a441;
+  --color-wheat-500: #b9821c;
 }
 
 body {
@@ -31,6 +36,9 @@ body {
   color: var(--color-ink);
   font-family: var(--font-sans);
 }
+
+/* Headings and big numbers: the landing page's tight, bold sans. */
+.font-display { letter-spacing: -0.025em; }
 
 /* Tabular figures so animating numbers don't jitter as digits change width. */
 .tnum { font-variant-numeric: tabular-nums; }

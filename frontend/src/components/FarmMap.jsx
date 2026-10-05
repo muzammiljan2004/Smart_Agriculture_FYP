@@ -79,7 +79,7 @@ export default function FarmMap({
             <Circle
               center={[f.gps_lat, f.gps_lng]}
               radius={radiusOf(f.area_hectares)}
-              pathOptions={{ color: '#ddb45c', weight: 2, fillColor: '#ddb45c', fillOpacity: 0.12 }}
+              pathOptions={{ color: '#d9a441', weight: 2, fillColor: '#d9a441', fillOpacity: 0.12 }}
             />
           )}
           <Marker position={[f.gps_lat, f.gps_lng]}>

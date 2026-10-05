@@ -103,7 +103,7 @@ export function YieldHistoryChart({ trend, predicted, unit, district, compact = 
         {predicted != null && (
           <div className="flex flex-1 flex-col items-center justify-end gap-1">
             <span className="tnum text-[10px] font-semibold">{predicted.toFixed(1)}</span>
-            <div className="w-full rounded-t-md bg-leaf-900"
+            <div className="w-full rounded-t-md bg-leaf-700"
                  style={{ height: Math.max(4, (predicted / top) * h) }}
                  title={`Predicted: ${predicted} ${unit}`} />
             <span className="text-[10px] font-semibold">Now</span>
@@ -112,7 +112,7 @@ export function YieldHistoryChart({ trend, predicted, unit, district, compact = 
       </div>
       <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted">
         <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-leaf-900" /> Predicted
+          <span className="h-2 w-2 rounded-full bg-leaf-700" /> Predicted
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-4 border-t border-dashed border-wheat-400" />
@@ -183,28 +183,28 @@ export default function DashboardPage({ farm, data, onNavigate, onAddFarm }) {
 
       <div className="grid gap-5 lg:grid-cols-3">
         {/* Yield hero */}
-        <div className="relative overflow-hidden rounded-2xl bg-leaf-900 p-7 text-leaf-50 shadow-sm">
-          <svg aria-hidden="true" viewBox="0 0 600 200" className="absolute inset-0 h-full w-full opacity-[0.12]">
+        <div className="relative overflow-hidden rounded-2xl border border-leaf-100 bg-linear-to-br from-leaf-50 via-white to-wheat-50 p-7 text-ink shadow-sm">
+          <svg aria-hidden="true" viewBox="0 0 600 200" className="absolute inset-0 h-full w-full opacity-7">
             {Array.from({ length: 10 }, (_, i) => (
               <path key={i}
                     d={'M -20 ' + (20 + i * 22) + ' Q 300 ' + (-10 + i * 22) + ' 620 ' + (40 + i * 22)}
-                    stroke="#d7e9dd" strokeWidth="1.1" fill="none" />
+                    stroke="#1a7f4b" strokeWidth="1.1" fill="none" />
             ))}
           </svg>
           <div className="relative">
-            <p className="text-xs font-semibold uppercase tracking-widest text-leaf-300">Predicted yield</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-leaf-700">Predicted yield</p>
 
             {!pred && !err && !fetching && (
               <div className="mt-3 animate-pulse space-y-3">
-                <div className="h-14 w-40 rounded-lg bg-leaf-800" />
-                <div className="h-3 w-56 rounded bg-leaf-800" />
+                <div className="h-14 w-40 rounded-lg bg-leaf-100" />
+                <div className="h-3 w-56 rounded bg-leaf-100" />
               </div>
             )}
 
             {(err || fetching) && (
               <div className="mt-3">
                 <PredictionGate err={err} fetching={fetching} onFetch={refreshImagery}
-                                crop={farm.crop_type} dark />
+                                crop={farm.crop_type} />
               </div>
             )}
 
@@ -214,24 +214,24 @@ export default function DashboardPage({ farm, data, onNavigate, onAddFarm }) {
                   <span className="tnum font-display text-6xl font-semibold leading-none">
                     {yieldNow.toFixed(2)}
                   </span>
-                  <span className="text-xl text-leaf-300">{pred.unit}</span>
+                  <span className="text-xl text-muted">{pred.unit}</span>
                 </p>
 
                 <div className="mt-6 flex flex-wrap items-center gap-2">
                   {pred.vs_district_pct != null && (
-                    <span className="rounded-lg bg-leaf-800 px-3 py-1.5 text-sm">
+                    <span className="rounded-lg bg-white px-3 py-1.5 text-sm ring-1 ring-leaf-100">
                       <span className="tnum font-semibold">
                         {pred.vs_district_pct > 0 ? '+' : ''}{pred.vs_district_pct}%
                       </span>
-                      <span className="text-leaf-300"> vs {farm.district} average</span>
+                      <span className="text-muted"> vs {farm.district} average</span>
                     </span>
                   )}
-                  <span className="tnum text-xs text-leaf-300">
+                  <span className="tnum text-xs text-muted">
                     {ci[0]}–{ci[1]} model spread
                   </span>
                 </div>
 
-                <p className="mt-5 text-xs text-leaf-300/80">
+                <p className="mt-5 text-xs text-muted">
                   {pred.model_used}{pred.feature_date && ' · imagery ' + pred.feature_date}
                 </p>
               </>

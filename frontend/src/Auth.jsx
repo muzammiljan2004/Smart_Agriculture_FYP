@@ -33,23 +33,23 @@ export default function Auth() {
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
       {/* Left: the pitch. Hidden on phones, where it would just push the form down. */}
-      <div className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-leaf-900 p-12 text-leaf-50">
+      <div className="relative hidden lg:flex flex-col justify-between overflow-hidden border-r border-leaf-100 bg-leaf-50 p-12 text-ink">
         <div
           aria-hidden="true"
-          className="absolute inset-0 opacity-70"
+          className="absolute inset-0"
           style={{
             backgroundImage:
-              'radial-gradient(60rem 40rem at 15% 10%, #1b4d35 0%, transparent 60%),' +
-              'radial-gradient(50rem 40rem at 85% 85%, #236344 0%, transparent 55%)',
+              'radial-gradient(60rem 40rem at 15% 10%, #dcf2e4 0%, transparent 60%),' +
+              'radial-gradient(50rem 40rem at 85% 85%, #fbf0d6 0%, transparent 55%)',
           }}
         />
         {/* Field-row motif: parallel arcs, like contour-ploughed land seen from orbit. */}
-        <svg aria-hidden="true" viewBox="0 0 400 400" className="absolute inset-0 h-full w-full opacity-[0.13]">
+        <svg aria-hidden="true" viewBox="0 0 400 400" className="absolute inset-0 h-full w-full opacity-8">
           {Array.from({ length: 14 }, (_, i) => (
             <path
               key={i}
               d={`M -40 ${60 + i * 26} Q 200 ${10 + i * 26} 440 ${100 + i * 26}`}
-              stroke="#d7e9dd" strokeWidth="1.2" fill="none"
+              stroke="#1a7f4b" strokeWidth="1.2" fill="none"
             />
           ))}
         </svg>
@@ -61,9 +61,9 @@ export default function Auth() {
 
         <div className="relative max-w-md">
           <h1 className="font-display text-5xl leading-[1.05] font-semibold">
-            Wheat yield,<br />forecast from orbit.
+            Wheat yield,<br />forecast <em className="font-accent text-[1.08em] font-normal italic tracking-normal text-leaf-700">from orbit.</em>
           </h1>
-          <p className="mt-5 text-leaf-200 leading-relaxed">
+          <p className="mt-5 text-ink/70 leading-relaxed">
             Sentinel-2 imagery over Sheikhupura, reduced to vegetation indices and
             run through a Random Forest — a yield estimate weeks before harvest.
           </p>
@@ -76,8 +76,8 @@ export default function Auth() {
             ['t/ha', 'output'],
           ].map(([v, k]) => (
             <div key={k}>
-              <dt className="font-display text-2xl font-semibold text-wheat-300">{v}</dt>
-              <dd className="text-leaf-200/80">{k}</dd>
+              <dt className="font-display text-2xl font-semibold text-leaf-700">{v}</dt>
+              <dd className="text-muted">{k}</dd>
             </div>
           ))}
         </dl>

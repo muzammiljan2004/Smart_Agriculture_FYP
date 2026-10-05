@@ -35,7 +35,7 @@
   letter-spacing:.02em;white-space:nowrap;border:1px solid transparent;
 }
 .r-badge i{width:5px;height:5px;border-radius:50%;background:currentColor;flex:none}
-.r-badge.production{background:var(--g900);color:#eaf3ec;border-color:var(--g900)}
+.r-badge.production{background:var(--g700);color:#fff;border-color:var(--g700)}
 .r-badge.approved  {background:var(--g100);color:var(--g700);border-color:var(--g300)}
 .r-badge.candidate {background:var(--amb-bg);color:var(--amb);border-color:var(--amb)}
 .r-badge.archived  {background:transparent;color:var(--mut);border-color:var(--line)}
@@ -89,13 +89,13 @@
  * visible without scripting a scroll.
  */
 .r-console{
-  background:var(--g900);color:#cfe3d5;border-radius:10px;padding:11px 13px;
+  background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:11px 13px;
   font:11px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   max-height:220px;overflow-y:auto;display:flex;flex-direction:column-reverse;
 }
 .r-console p{white-space:pre-wrap;word-break:break-word}
-.r-console .t{color:#7fae90;margin-right:8px}
-.r-console .err{color:#f0a9a0}
+.r-console .t{color:var(--g700);margin-right:8px}
+.r-console .err{color:var(--red)}
 
 /* ---------------------------------------------------------- confusion matrix
  *
@@ -139,7 +139,7 @@
 }
 .r-dialog::backdrop{background:rgba(10,20,15,.45)}
 .r-dialog .hd{padding:18px 20px 0}
-.r-dialog .hd h3{font:500 19px/1.25 var(--serif)}
+.r-dialog .hd h3{font:700 18px/1.25 var(--display);letter-spacing:-.02em}
 .r-dialog .hd p{color:var(--mut);font-size:12.5px;margin-top:6px}
 .r-dialog .bd{padding:14px 20px}
 .r-dialog .ft{
@@ -160,9 +160,9 @@
 
 /* A metric block where the figure matters more than the label. */
 .r-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:10px}
-.r-metric{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--card)}
+.r-metric{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card)}
 .r-metric .k{color:var(--mut);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
-.r-metric .v{font:500 21px/1.15 var(--serif);margin-top:3px;font-variant-numeric:tabular-nums}
+.r-metric .v{font:700 20px/1.15 var(--display);letter-spacing:-.03em;margin-top:3px;font-variant-numeric:tabular-nums}
 .r-metric.neg .v{color:var(--red)}
 
 /* Filter bar shared by screens 2, 4, 9 and 10. */

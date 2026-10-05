@@ -8,7 +8,7 @@
       name="description"
       content="Satellite remote sensing and machine-learning crop yield prediction for Punjab, Pakistan. 34 districts, 11 crops, 8 seasons. Separate portals for farmers, government and researchers."
     />
-    <meta name="theme-color" content="#0e2c21" />
+    <meta name="theme-color" content="#fbfcf8" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- THE THIRD VITE ENTRY, AND THE ONLY ONE WITH NO SCRIPT TAG.
@@ -32,12 +32,12 @@
                That component styles itself with Tailwind utility classes, which
                only exist inside the farmer bundle -- this page has no Tailwind
                and no React, so the colours are written out. -->
-          <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
-            <circle cx="16" cy="16" r="15" fill="#1b4d35" />
-            <path d="M16 25c0-6 3-10 8-12-1 7-4 10-8 12z" fill="#7fb797" />
-            <path d="M16 25c0-6-3-10-8-12 1 7 4 10 8 12z" fill="#4f9a72" />
-            <path d="M16 26V15" stroke="#d7e9dd" stroke-width="1.4" stroke-linecap="round" fill="none" />
-            <circle cx="16" cy="9" r="2.2" fill="#ddb45c" />
+          <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
+            <circle cx="16" cy="16" r="15" fill="#1a7f4b" />
+            <path d="M16 25c0-6 3-10 8-12-1 7-4 10-8 12z" fill="#bfe5cc" />
+            <path d="M16 25c0-6-3-10-8-12 1 7 4 10 8 12z" fill="#7fc79c" />
+            <path d="M16 26V15" stroke="#effaf3" stroke-width="1.4" stroke-linecap="round" fill="none" />
+            <circle cx="16" cy="9" r="2.2" fill="#e8b84f" />
           </svg>
           <span>Smart Agriculture</span>
         </a>
@@ -45,7 +45,6 @@
           <a href="#portals">Portals</a>
           <a href="#how">How it works</a>
           <a href="#platform">Platform</a>
-          <a href="#model">Model &amp; accuracy</a>
           <a href="#data">Data</a>
           <a href="#tech">Technology</a>
           <a href="#access">Access</a>
@@ -58,22 +57,88 @@
     <!-- =============================================================== hero -->
     <header class="hero" id="top">
       <div class="wrap">
-        <span class="tag"><i></i>Final Year Project · Punjab, Pakistan</span>
-        <h1>Crop yield prediction from orbit</h1>
-        <p class="lede">
-          Satellite remote sensing and machine learning applied to Pakistan&rsquo;s
-          cropland &mdash; field-level monitoring for the people who grow, and
-          district-level analysis for the people who plan.
-        </p>
-        <p class="val">
-          Sentinel-1 radar and Sentinel-2 optical imagery pulled through Google
-          Earth Engine, a Random Forest trained on eight seasons of officially
-          reported district yields, and an early warning when a field&rsquo;s own
-          vegetation curve turns the wrong way.
-        </p>
-        <div class="herocta">
-          <a class="btn solid" href="#portals">Choose a portal</a>
-          <a class="btn ghost" href="#model">See the accuracy numbers</a>
+        <div class="herocopy">
+          <h1>Crop yield prediction <em>from orbit</em></h1>
+          <p class="lede">
+            Satellite remote sensing and machine learning applied to Pakistan&rsquo;s
+            cropland &mdash; field-level monitoring for the people who grow, and
+            district-level analysis for the people who plan.
+          </p>
+          <div class="herocta">
+            <a class="btn primary" href="#portals">
+              Choose a portal
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </a>
+            <a class="btn quiet" href="#how">How it works</a>
+          </div>
+        </div>
+
+        <!-- PRODUCT PREVIEW. Decorative and aria-hidden: a field map, a season
+             curve and an alert, drawn to show what the portals do. It carries no
+             figures on purpose -- every number on this page has a source, and an
+             illustration does not. -->
+        <div class="preview" aria-hidden="true">
+          <div class="pv-bar"><i></i><i></i><i></i><span>Field monitor</span></div>
+          <div class="pv-grid">
+            <div class="pv-map">
+              <svg viewBox="0 0 400 270" preserveAspectRatio="xMidYMid slice" focusable="false">
+                <rect class="m-ground" width="400" height="270" />
+                <g transform="rotate(-9 200 135)">
+                  <rect class="m1" x="-20" y="-10" width="120" height="86" rx="5" />
+                  <rect class="m4" x="106" y="-10" width="84"  height="86" rx="5" />
+                  <rect class="m2" x="196" y="-10" width="130" height="86" rx="5" />
+                  <rect class="m3" x="332" y="-10" width="110" height="86" rx="5" />
+                  <rect class="m5" x="-20" y="82"  width="96"  height="92" rx="5" />
+                  <rect class="m3" x="82"  y="82"  width="128" height="92" rx="5" />
+                  <rect class="m1" x="216" y="82"  width="88"  height="92" rx="5" />
+                  <rect class="m4" x="310" y="82"  width="132" height="92" rx="5" />
+                  <rect class="m2" x="-20" y="180" width="140" height="110" rx="5" />
+                  <rect class="m5" x="126" y="180" width="90"  height="110" rx="5" />
+                  <rect class="m3" x="222" y="180" width="110" height="110" rx="5" />
+                  <rect class="m1" x="338" y="180" width="104" height="110" rx="5" />
+                  <path class="m-rows" d="M90 92v72M100 92v72M110 92v72M120 92v72M130 92v72M140 92v72M150 92v72M160 92v72M170 92v72M180 92v72M190 92v72M200 92v72" />
+                  <path class="m-rows" d="M206 0v66M218 0v66M230 0v66M242 0v66M254 0v66M266 0v66M278 0v66M290 0v66M302 0v66M314 0v66" />
+                </g>
+                <path class="m-pass" d="M-10 250 L 410 30" />
+                <circle class="m-ring2" cx="150" cy="134" r="46" />
+                <circle class="m-ring" cx="150" cy="134" r="30" />
+                <circle class="m-pin" cx="150" cy="134" r="4" />
+              </svg>
+              <span class="pv-tag"><i></i>Registered field</span>
+            </div>
+
+            <div class="pv-side">
+              <div class="pv-card">
+                <span class="pv-k">Season curve</span>
+                <b class="pv-t">Vegetation index over the growing window</b>
+                <svg viewBox="0 0 300 110" class="pv-curve" focusable="false">
+                  <defs>
+                    <linearGradient id="cf" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#1a7f4b" stop-opacity=".22" />
+                      <stop offset="1" stop-color="#1a7f4b" stop-opacity="0" />
+                    </linearGradient>
+                  </defs>
+                  <path class="c-grid" d="M0 30H300M0 60H300M0 90H300" />
+                  <path class="c-fill" d="M0 92 C 50 90, 80 70, 120 40 S 180 12, 205 22 S 260 80, 300 88 L300 110 L0 110Z" />
+                  <path class="c-line" d="M0 92 C 50 90, 80 70, 120 40 S 180 12, 205 22 S 260 80, 300 88" />
+                  <circle class="c-dot" cx="178" cy="17" r="4" />
+                </svg>
+                <div class="pv-axis"><span>Sowing</span><span>Peak</span><span>Harvest</span></div>
+              </div>
+              <div class="pv-card pv-alert">
+                <span class="pv-ico">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5c3 4 6 7.4 6 11a6 6 0 01-12 0c0-3.6 3-7 6-11z"/></svg>
+                </span>
+                <div>
+                  <b class="pv-t">Water-stress signal</b>
+                  <span class="pv-s">The curve turned against the field&rsquo;s own history</span>
+                </div>
+              </div>
+              <div class="pv-chips">
+                <span>NDVI</span><span>EVI</span><span>NDWI</span><span>SAVI</span><span>NBR</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Every figure below is counted from the shipped dataset and schema,
@@ -91,7 +156,7 @@
       <!-- ========================================================= portals -->
       <section class="band" id="portals" aria-labelledby="portals-h">
         <div class="wrap">
-          <div class="sechead">
+          <div class="sechead center">
             <span class="eyebrow">Three audiences</span>
             <h2 id="portals-h">Choose a portal</h2>
             <p>
@@ -103,14 +168,17 @@
 
           <div class="cards">
             <!-- -------------------------------------------------- farmer -->
-            <article class="pcard" aria-labelledby="p-farmer">
-              <span class="pico" aria-hidden="true">
-                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 21V9" />
-                  <path d="M12 13c0-4 2.5-6.5 6-7.5-.5 5-3 7.5-6 7.5z" />
-                  <path d="M12 16c0-4-2.5-6.5-6-7.5.5 5 3 7.5 6 7.5z" />
-                </svg>
-              </span>
+            <article class="pcard farmer" aria-labelledby="p-farmer">
+              <div class="phead">
+                <span class="pico" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 21V9" />
+                    <path d="M12 13c0-4 2.5-6.5 6-7.5-.5 5-3 7.5-6 7.5z" />
+                    <path d="M12 16c0-4-2.5-6.5-6-7.5.5 5 3 7.5 6 7.5z" />
+                  </svg>
+                </span>
+                <span class="access open">Open registration</span>
+              </div>
               <h3 id="p-farmer">Farmer Portal</h3>
               <p class="who">For registered farmers</p>
               <p class="desc">
@@ -125,24 +193,29 @@
                 <li>Downloadable per-farm reports</li>
               </ul>
               <div class="foot">
-                <hr class="sep" />
-                <a class="btn dark cta" href="/farmer.html">Enter Farmer Portal</a>
+                <a class="btn primary cta" href="/farmer.html">Enter Farmer Portal</a>
                 <small class="note">
-                  Open registration &middot; sign in or create an account. You see only
-                  your own farms &mdash; enforced by row-level security, not by the UI.
+                  Sign in or create an account. You see only your own farms &mdash;
+                  enforced by row-level security, not by the UI.
                 </small>
               </div>
             </article>
 
             <!-- ---------------------------------------------- government -->
-            <article class="pcard" aria-labelledby="p-gov">
-              <span class="pico" aria-hidden="true">
-                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M3 21h18" />
-                  <path d="M4 21V10l8-5 8 5v11" />
-                  <path d="M9 21v-6h6v6" />
-                </svg>
-              </span>
+            <article class="pcard gov" aria-labelledby="p-gov">
+              <div class="phead">
+                <span class="pico" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 21h18" />
+                    <path d="M4 21V10l8-5 8 5v11" />
+                    <path d="M9 21v-6h6v6" />
+                  </svg>
+                </span>
+                <span class="access">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+                  Invite only
+                </span>
+              </div>
               <h3 id="p-gov">Government Portal</h3>
               <p class="who">For policymakers &amp; officials</p>
               <p class="desc">
@@ -157,33 +230,32 @@
                 <li>Read-only &mdash; no analytical table is client-writable</li>
               </ul>
               <div class="foot">
-                <hr class="sep" />
-                <a class="btn dark cta" href="/government.html">Enter Government Portal</a>
+                <a class="btn primary cta" href="/government.html">Enter Government Portal</a>
                 <small class="note">
-                  <span class="lock" aria-hidden="true">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
-                  </span>
-                  Invite only &middot; no public sign-up. Accounts are issued by an
-                  administrator and scoped to one district.
+                  No public sign-up. Accounts are issued by an administrator and
+                  scoped to one district.
                 </small>
               </div>
             </article>
 
             <!-- ---------------------------------------------- researcher -->
-            <!-- NOW BUILT. This card was an aria-disabled span until the portal
-                 existed. research.html is registered in vite.config.js and the
-                 CTA below is a real link. Note the path is /research.html, not
-                 the /researcher.html this comment used to reserve: the entry is
-                 named after its folder (src/research/), the same way
-                 government.html maps to src/gov/. -->
-            <article class="pcard" aria-labelledby="p-res">
-              <span class="pico" aria-hidden="true">
-                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="11" cy="11" r="6.5" />
-                  <path d="M20 20l-4.5-4.5" />
-                  <path d="M11 8v6M8 11h6" />
-                </svg>
-              </span>
+            <!-- research.html is registered in vite.config.js. The path is
+                 /research.html, named after its folder (src/research/), the same
+                 way government.html maps to src/gov/. -->
+            <article class="pcard res" aria-labelledby="p-res">
+              <div class="phead">
+                <span class="pico" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="6.5" />
+                    <path d="M20 20l-4.5-4.5" />
+                    <path d="M11 8v6M8 11h6" />
+                  </svg>
+                </span>
+                <span class="access">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+                  Invite only
+                </span>
+              </div>
               <h3 id="p-res">Researcher Portal</h3>
               <p class="who">For researchers</p>
               <p class="desc">
@@ -197,14 +269,9 @@
                 <li>Benchmarks against the literature</li>
               </ul>
               <div class="foot">
-                <hr class="sep" />
-                <a class="btn dark cta" href="/research.html">Enter Researcher Portal</a>
+                <a class="btn primary cta" href="/research.html">Enter Researcher Portal</a>
                 <small class="note">
-                  <span class="lock" aria-hidden="true">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
-                  </span>
-                  Invite only &middot; no public sign-up. Accounts are issued by a
-                  research lead.
+                  No public sign-up. Accounts are issued by a research lead.
                 </small>
               </div>
             </article>
@@ -215,7 +282,7 @@
       <!-- ============================================================= how -->
       <section class="band alt" id="how" aria-labelledby="how-h">
         <div class="wrap">
-          <div class="sechead">
+          <div class="sechead center">
             <span class="eyebrow">Pipeline</span>
             <h2 id="how-h">How it works</h2>
             <p>
@@ -224,8 +291,11 @@
               from real imagery over a real boundary.
             </p>
           </div>
-          <div class="steps">
-            <div class="step">
+          <ol class="steps">
+            <li class="step">
+              <span class="sico" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M3 10h4v4H3zM17 10h4v4h-4zM7 12h2M15 12h2"/><path d="M12 15v3"/><path d="M9.5 21a3.5 3.5 0 015 0"/></svg>
+              </span>
               <span class="n">01</span>
               <b>Observe</b>
               <p>
@@ -234,8 +304,11 @@
                 cloud-masked scene is dropped rather than filled in &mdash; an
                 absence of observation is not an observation of nothing.
               </p>
-            </div>
-            <div class="step">
+            </li>
+            <li class="step">
+              <span class="sico" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l3-8 4 16 3-8h6"/></svg>
+              </span>
               <span class="n">02</span>
               <b>Measure</b>
               <p>
@@ -243,8 +316,11 @@
                 EVI, NDWI, SAVI and NBR &mdash; composited across the crop&rsquo;s
                 own growing window, then joined to district soil and weather.
               </p>
-            </div>
-            <div class="step">
+            </li>
+            <li class="step">
+              <span class="sico" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l3 5h-6zM12 8v4"/><path d="M7 12l-3 5h6zM17 12l-3 5h6z"/><path d="M7 17v4M17 17v4M12 12h-5M12 12h5"/></svg>
+              </span>
               <span class="n">03</span>
               <b>Predict</b>
               <p>
@@ -253,8 +329,11 @@
                 interval, so a confident and an uncertain prediction do not look
                 alike.
               </p>
-            </div>
-            <div class="step">
+            </li>
+            <li class="step">
+              <span class="sico" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 003.4 0"/></svg>
+              </span>
               <span class="n">04</span>
               <b>Warn</b>
               <p>
@@ -262,15 +341,15 @@
                 consistent with water or heat stress raises an alert while there is
                 still a season left to act in.
               </p>
-            </div>
-          </div>
+            </li>
+          </ol>
         </div>
       </section>
 
       <!-- ======================================================== platform -->
       <section class="band" id="platform" aria-labelledby="platform-h">
         <div class="wrap">
-          <div class="sechead">
+          <div class="sechead center">
             <span class="eyebrow">Capabilities</span>
             <h2 id="platform-h">Inside the platform</h2>
             <p>
@@ -279,10 +358,10 @@
               row.
             </p>
           </div>
-          <div class="feats">
-            <div class="feat">
+          <div class="bento">
+            <div class="feat wide">
               <span class="ico" aria-hidden="true">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l3-8 4 16 3-8h6"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l3-8 4 16 3-8h6"/></svg>
               </span>
               <b>Vegetation time series</b>
               <p>
@@ -290,10 +369,16 @@
                 with the radar channels beside them and the sensor named on each
                 observation.
               </p>
+              <!-- decorative: five index lines, no values -->
+              <svg class="spark" viewBox="0 0 320 70" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+                <path class="s1" d="M0 60 C 60 58, 90 30, 140 18 S 220 20, 250 40 S 300 58, 320 60" />
+                <path class="s2" d="M0 64 C 60 62, 100 42, 150 30 S 220 32, 255 48 S 300 62, 320 64" />
+                <path class="s3" d="M0 52 C 50 52, 90 44, 140 40 S 220 34, 260 44 S 300 54, 320 54" />
+              </svg>
             </div>
-            <div class="feat">
+            <div class="feat tall">
               <span class="ico" aria-hidden="true">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15l-5-5L5 21"/><path d="M3 3h18v18H3z"/><circle cx="8.5" cy="8.5" r="1.6"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15l-5-5L5 21"/><path d="M3 3h18v18H3z"/><circle cx="8.5" cy="8.5" r="1.6"/></svg>
               </span>
               <b>Field-level mapping</b>
               <p>
@@ -301,10 +386,11 @@
                 the indices were actually reduced over &mdash; not a pin standing in
                 for a boundary.
               </p>
+              <div class="minimap" aria-hidden="true"><i></i></div>
             </div>
             <div class="feat">
               <span class="ico" aria-hidden="true">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 110 20 10 10 0 010-20z"/><path d="M12 7v5l3.5 2"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 110 20 10 10 0 010-20z"/><path d="M12 7v5l3.5 2"/></svg>
               </span>
               <b>Harvest-window detection</b>
               <p>
@@ -315,8 +401,8 @@
               </p>
             </div>
             <div class="feat">
-              <span class="ico" aria-hidden="true">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.2L2 18a1.8 1.8 0 001.6 2.8h16.8A1.8 1.8 0 0022 18L13.7 3.2a1.9 1.9 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+              <span class="ico warm" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.2L2 18a1.8 1.8 0 001.6 2.8h16.8A1.8 1.8 0 0022 18L13.7 3.2a1.9 1.9 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
               </span>
               <b>Risk &amp; stress alerts</b>
               <p>
@@ -327,7 +413,7 @@
             </div>
             <div class="feat">
               <span class="ico" aria-hidden="true">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/></svg>
               </span>
               <b>District analytics</b>
               <p>
@@ -336,9 +422,9 @@
                 eight reported seasons.
               </p>
             </div>
-            <div class="feat">
+            <div class="feat wide2">
               <span class="ico" aria-hidden="true">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M21 12a9 9 0 11-5.2-8.2"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M21 12a9 9 0 11-5.2-8.2"/></svg>
               </span>
               <b>Field survey returns</b>
               <p>
@@ -351,110 +437,10 @@
         </div>
       </section>
 
-      <!-- =========================================================== model -->
-      <!-- THE HONEST SECTION, and the reason this page has one at all.
-           docs/step11_temporal_experiment.md records, in as many words, that the
-           pooled R² does NOT justify claiming "~93% accurate yield prediction",
-           because it is dominated by the yield-scale gap between crops. Printing
-           0.92 alone would be the exact claim that document warns against, so
-           the per-crop spread and the five negative crops are published beside
-           it. Numbers here come from the fixed-holdout tables in that file and
-           must be updated together with it. -->
-      <section class="band alt" id="model" aria-labelledby="model-h">
-        <div class="wrap">
-          <div class="sechead">
-            <span class="eyebrow">Evaluation</span>
-            <h2 id="model-h">The model, and how far to trust it</h2>
-            <p>
-              The production model is a median-composite Random Forest, held to a
-              fixed holdout of two unseen seasons. Both the headline figure and the
-              places it falls apart are published here, because a yield number a
-              government acts on should arrive with its own error bars.
-            </p>
-          </div>
-
-          <div class="specs" style="margin-bottom:18px">
-            <div class="spec">
-              <dt>Algorithm</dt>
-              <dd><span class="mono">RandomForestRegressor</span> &middot; 500 trees, max depth 25, seed 42</dd>
-            </div>
-            <div class="spec">
-              <dt>Features</dt>
-              <dd>5 median-composite indices + crop one-hot, joined to district soil &amp; weather</dd>
-            </div>
-            <div class="spec">
-              <dt>Training rows</dt>
-              <dd>2,378 district × crop × season records, 2017&#8209;18 to 2024&#8209;25</dd>
-            </div>
-            <div class="spec">
-              <dt>Validation</dt>
-              <dd>Fixed holdout on seasons 2021&#8209;22 and 2022&#8209;23, plus a time-aware split</dd>
-            </div>
-          </div>
-
-          <div class="tablewrap">
-            <table>
-              <caption class="sr-only">Pooled holdout metrics for the production model</caption>
-              <thead>
-                <tr><th>Pooled holdout metric</th><th class="num">Value</th><th>Reading</th></tr>
-              </thead>
-              <tbody>
-                <tr><td><b>R²</b></td><td class="num">0.9212</td><td class="chip weak">Inflated by crop scale</td></tr>
-                <tr><td><b>RMSE</b></td><td class="num">5.6467</td><td>Maunds per acre</td></tr>
-                <tr><td><b>MAE</b></td><td class="num">2.8956</td><td>Maunds per acre</td></tr>
-                <tr><td><b>Wheat only, R²</b></td><td class="num">0.7176</td><td class="chip good">The defensible result</td></tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="callout">
-            <b>Why the 0.92 is not an accuracy claim.</b>
-            Pooled across eleven crops whose yields differ by an order of magnitude,
-            R² mostly measures the model&rsquo;s ability to tell sugarcane from
-            wheat &mdash; not its skill within either. Per crop it ranges from
-            <span class="mono">+0.77</span> down to <span class="mono">&minus;0.72</span>,
-            and <b style="display:inline">five of eleven crops score below zero</b>,
-            meaning the model does worse than predicting that crop&rsquo;s own
-            average. Every row is a district average, so this is not field-level
-            accuracy either. Wheat is the one crop whose result survives a
-            time-aware split, and it is the crop the project claims.
-          </div>
-
-          <div class="tablewrap" style="margin-top:18px">
-            <table>
-              <caption class="sr-only">Per-crop holdout R², vegetation-only arm</caption>
-              <thead>
-                <tr><th>Crop</th><th class="num">Holdout R²</th><th>Verdict</th></tr>
-              </thead>
-              <tbody>
-                <tr><td><b>Wheat</b></td><td class="num">0.7730</td><td><span class="chip good">Reliable</span></td></tr>
-                <tr><td>Jowar</td><td class="num">0.3807</td><td><span class="chip weak">Weak</span></td></tr>
-                <tr><td>Onion</td><td class="num">0.3308</td><td><span class="chip weak">Weak</span></td></tr>
-                <tr><td>Potato</td><td class="num">0.2607</td><td><span class="chip weak">Weak</span></td></tr>
-                <tr><td>Cotton</td><td class="num">0.2559</td><td><span class="chip weak">Weak</span></td></tr>
-                <tr><td>Sugarcane</td><td class="num">0.1739</td><td><span class="chip weak">Needs a longer window</span></td></tr>
-                <tr><td>Rice</td><td class="num">&minus;0.0453</td><td><span class="chip bad">Below baseline</span></td></tr>
-                <tr><td>Tomato</td><td class="num">&minus;0.1192</td><td><span class="chip bad">Below baseline</span></td></tr>
-                <tr><td>Barley</td><td class="num">&minus;0.1383</td><td><span class="chip bad">Below baseline</span></td></tr>
-                <tr><td>Maize</td><td class="num">&minus;0.1916</td><td><span class="chip bad">Below baseline</span></td></tr>
-                <tr><td>Bajra</td><td class="num">&minus;0.7197</td><td><span class="chip bad">Below baseline</span></td></tr>
-              </tbody>
-            </table>
-          </div>
-          <p class="note" style="margin-top:12px">
-            Figures from the fixed-holdout, vegetation-only arm of the feature-ablation
-            experiment recorded in <span class="mono">docs/step11_temporal_experiment.md</span>.
-            The production model remains the median-composite one: a promising temporal
-            variant was measured, documented and <em>not</em> shipped, because several
-            crops stayed weak.
-          </p>
-        </div>
-      </section>
-
       <!-- ============================================================ data -->
-      <section class="band" id="data" aria-labelledby="data-h">
-        <div class="wrap">
-          <div class="sechead">
+      <section class="band alt" id="data" aria-labelledby="data-h">
+        <div class="wrap split">
+          <div class="sechead sticky">
             <span class="eyebrow">Provenance</span>
             <h2 id="data-h">Where the data comes from</h2>
             <p>
@@ -462,51 +448,56 @@
               synthetic &mdash; where a figure does not exist, the screen that would
               show it says so instead of filling the gap.
             </p>
+            <div class="aside">
+              <b>Two screens in the government portal are deliberately empty.</b>
+              Crop-area estimation and harvest progress have no source data yet, so
+              they render their full layout and name the missing input rather than
+              displaying a plausible number. A missing value prints as an em dash,
+              never as zero, and a district with no reading is drawn grey on the map
+              rather than at the bottom of the colour ramp.
+            </div>
           </div>
-          <div class="tablewrap">
-            <table>
-              <thead>
-                <tr><th>Layer</th><th>Source</th><th>Resolution / grain</th></tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><b>Optical imagery</b></td>
-                  <td>Sentinel-2 surface reflectance via Google Earth Engine</td>
-                  <td>10&nbsp;m, per satellite pass</td>
-                </tr>
-                <tr>
-                  <td><b>Radar imagery</b></td>
-                  <td>Sentinel-1 C-band SAR (VV / VH) via Google Earth Engine</td>
-                  <td>Per pass, cloud-independent</td>
-                </tr>
-                <tr>
-                  <td><b>Reported yields</b></td>
-                  <td>Crop Reporting Service final estimates, Punjab</td>
-                  <td>District × crop × season</td>
-                </tr>
-                <tr>
-                  <td><b>Soil &amp; weather</b></td>
-                  <td>Per-district soil profile and seasonal temperature series</td>
-                  <td>District, seasonal aggregate</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="callout">
-            <b>Two screens in the government portal are deliberately empty.</b>
-            Crop-area estimation and harvest progress have no source data yet, so
-            they render their full layout and name the missing input rather than
-            displaying a plausible number. A missing value prints as an em dash,
-            never as zero, and a district with no reading is drawn grey on the map
-            rather than at the bottom of the colour ramp.
+          <div class="sources-grid">
+            <div class="src">
+              <span class="ico" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>
+              </span>
+              <b>Optical imagery</b>
+              <p>Sentinel-2 surface reflectance via Google Earth Engine</p>
+              <span class="grain">10&nbsp;m, per satellite pass</span>
+            </div>
+            <div class="src">
+              <span class="ico" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18a10 10 0 0116 0"/><path d="M7.5 18a6 6 0 019 0"/><circle cx="12" cy="18" r="1.4"/></svg>
+              </span>
+              <b>Radar imagery</b>
+              <p>Sentinel-1 C-band SAR (VV / VH) via Google Earth Engine</p>
+              <span class="grain">Per pass, cloud-independent</span>
+            </div>
+            <div class="src">
+              <span class="ico" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>
+              </span>
+              <b>Reported yields</b>
+              <p>Crop Reporting Service final estimates, Punjab</p>
+              <span class="grain">District × crop × season</span>
+            </div>
+            <div class="src">
+              <span class="ico" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.8V4a2 2 0 10-4 0v10.8a4 4 0 104 0z"/></svg>
+              </span>
+              <b>Soil &amp; weather</b>
+              <p>Per-district soil profile and seasonal temperature series</p>
+              <span class="grain">District, seasonal aggregate</span>
+            </div>
           </div>
         </div>
       </section>
 
       <!-- ============================================================ tech -->
-      <section class="band alt" id="tech" aria-labelledby="tech-h">
+      <section class="band" id="tech" aria-labelledby="tech-h">
         <div class="wrap">
-          <div class="sechead">
+          <div class="sechead center">
             <span class="eyebrow">Architecture</span>
             <h2 id="tech-h">Technology</h2>
             <p>
@@ -515,25 +506,28 @@
               Earth Engine or scikit-learn, and the database that enforces access.
             </p>
           </div>
-          <div class="specs">
-            <div class="spec">
-              <dt>Front end</dt>
-              <dd>React 18 &middot; Vite &middot; Tailwind v4 &middot; Leaflet</dd>
+          <div class="arch">
+            <div class="node">
+              <span class="nk">Front end</span>
+              <div class="tags"><span>React 18</span><span>Vite</span><span>Tailwind v4</span><span>Leaflet</span></div>
             </div>
-            <div class="spec">
-              <dt>ML service</dt>
-              <dd>FastAPI &middot; scikit-learn &middot; Google Earth Engine &middot; 10 endpoints</dd>
+            <span class="link" aria-hidden="true"></span>
+            <div class="node">
+              <span class="nk">ML service</span>
+              <div class="tags"><span>FastAPI</span><span>scikit-learn</span><span>Google Earth Engine</span><span>10 endpoints</span></div>
             </div>
-            <div class="spec">
-              <dt>Database</dt>
-              <dd>Supabase &middot; PostgreSQL &middot; PostGIS &middot; row-level security</dd>
-            </div>
-            <div class="spec">
-              <dt>Government schema</dt>
-              <dd>13 tables &middot; 4 helper functions &middot; 24 RLS policies</dd>
+            <span class="link" aria-hidden="true"></span>
+            <div class="node">
+              <span class="nk">Database</span>
+              <div class="tags"><span>Supabase</span><span>PostgreSQL</span><span>PostGIS</span><span>Row-level security</span></div>
             </div>
           </div>
-          <p class="note" style="margin-top:14px">
+          <dl class="schema">
+            <div><dt>Government schema tables</dt><dd>13</dd></div>
+            <div><dt>Helper functions</dt><dd>4</dd></div>
+            <div><dt>RLS policies</dt><dd>24</dd></div>
+          </dl>
+          <p class="note center">
             Anything requiring Python lives in the ML service; anything that is a
             plain table read goes straight to Postgres from the browser, so no CRUD
             API exists that nobody needed. The service&rsquo;s privileged key never
@@ -543,9 +537,9 @@
       </section>
 
       <!-- ========================================================== access -->
-      <section class="band" id="access" aria-labelledby="access-h">
-        <div class="wrap">
-          <div class="sechead">
+      <section class="band alt" id="access" aria-labelledby="access-h">
+        <div class="wrap split">
+          <div class="sechead sticky">
             <span class="eyebrow">Security</span>
             <h2 id="access-h">Who can see what</h2>
             <p>
@@ -554,84 +548,97 @@
               thing that actually stops a request.
             </p>
           </div>
-          <div class="feats">
-            <div class="feat">
+          <ul class="rules">
+            <li>
               <span class="ico" aria-hidden="true">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6l8-4z"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6l8-4z"/></svg>
               </span>
-              <b>Farmers see only their own farms</b>
-              <p>
-                Enforced by a policy on the farms table keyed to the signed-in user,
-                so a crafted request returns nothing rather than someone
-                else&rsquo;s field.
-              </p>
-            </div>
-            <div class="feat">
+              <div>
+                <b>Farmers see only their own farms</b>
+                <p>
+                  Enforced by a policy on the farms table keyed to the signed-in user,
+                  so a crafted request returns nothing rather than someone
+                  else&rsquo;s field.
+                </p>
+              </div>
+            </li>
+            <li>
               <span class="ico" aria-hidden="true">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0113 0"/><path d="M16 11.2A3.4 3.4 0 0017 4.6"/><path d="M18 20a6.5 6.5 0 00-2.2-4.9"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0113 0"/><path d="M16 11.2A3.4 3.4 0 0017 4.6"/><path d="M18 20a6.5 6.5 0 00-2.2-4.9"/></svg>
               </span>
-              <b>Three government tiers</b>
-              <p>
-                A super admin sees the province; a district manager sees one
-                district and its staff; an employee sees their district in the role
-                they were given. A manager cannot read another district.
-              </p>
-            </div>
-            <div class="feat">
+              <div>
+                <b>Three government tiers</b>
+                <p>
+                  A super admin sees the province; a district manager sees one
+                  district and its staff; an employee sees their district in the role
+                  they were given. A manager cannot read another district.
+                </p>
+              </div>
+            </li>
+            <li>
               <span class="ico" aria-hidden="true">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
               </span>
-              <b>No self-promotion</b>
-              <p>
-                There is no update policy letting anyone change their own tier or
-                district &mdash; not even the administrator. The escalation is
-                absent, not merely checked for.
-              </p>
-            </div>
-            <div class="feat">
+              <div>
+                <b>No self-promotion</b>
+                <p>
+                  There is no update policy letting anyone change their own tier or
+                  district &mdash; not even the administrator. The escalation is
+                  absent, not merely checked for.
+                </p>
+              </div>
+            </li>
+            <li>
               <span class="ico" aria-hidden="true">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M7 21V8l5-4 5 4v13"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M7 21V8l5-4 5 4v13"/></svg>
               </span>
-              <b>The government portal is read-only</b>
-              <p>
-                Yield predictions, satellite indices, risk alerts and subsidy
-                recommendations carry no write policy at any tier, so no official
-                can edit a figure the model produced.
-              </p>
-            </div>
-            <div class="feat">
+              <div>
+                <b>The government portal is read-only</b>
+                <p>
+                  Yield predictions, satellite indices, risk alerts and subsidy
+                  recommendations carry no write policy at any tier, so no official
+                  can edit a figure the model produced.
+                </p>
+              </div>
+            </li>
+            <li>
               <span class="ico" aria-hidden="true">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z"/><path d="M4 9h16"/><path d="M9 14h6"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z"/><path d="M4 9h16"/><path d="M9 14h6"/></svg>
               </span>
-              <b>No individual farm records cross over</b>
-              <p>
-                No role in the government portal can read a single row of the
-                farmers&rsquo; table. Officials see district aggregates; growers keep
-                their own data.
-              </p>
-            </div>
-            <div class="feat">
+              <div>
+                <b>No individual farm records cross over</b>
+                <p>
+                  No role in the government portal can read a single row of the
+                  farmers&rsquo; table. Officials see district aggregates; growers keep
+                  their own data.
+                </p>
+              </div>
+            </li>
+            <li>
               <span class="ico" aria-hidden="true">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M21 12a9 9 0 11-5.2-8.2"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M21 12a9 9 0 11-5.2-8.2"/></svg>
               </span>
-              <b>57 boundary checks, all passing</b>
-              <p>
-                A verification script creates throwaway accounts across two
-                districts, signs in as a browser would, and asserts every boundary
-                from both sides &mdash; that the right rows are visible and the
-                wrong ones are not.
-              </p>
-            </div>
-          </div>
+              <div>
+                <b>57 boundary checks, all passing</b>
+                <p>
+                  A verification script creates throwaway accounts across two
+                  districts, signs in as a browser would, and asserts every boundary
+                  from both sides &mdash; that the right rows are visible and the
+                  wrong ones are not.
+                </p>
+              </div>
+            </li>
+          </ul>
         </div>
       </section>
 
       <!-- ============================================================= faq -->
-      <section class="band alt" id="faq" aria-labelledby="faq-h">
-        <div class="wrap">
-          <div class="sechead">
+      <section class="band" id="faq" aria-labelledby="faq-h">
+        <div class="wrap split">
+          <div class="sechead sticky">
             <span class="eyebrow">Questions</span>
             <h2 id="faq-h">Frequently asked</h2>
+            <p>The short answers to what visitors ask first.</p>
           </div>
           <div class="faq">
             <details>
@@ -697,6 +704,23 @@
           </div>
         </div>
       </section>
+
+      <!-- ========================================================== closer -->
+      <!-- A last way in for whoever scrolled the whole page: the same three
+           links as the portal cards, so nobody has to scroll back up. -->
+      <section class="closer" aria-labelledby="closer-h">
+        <div class="wrap">
+          <div class="closer-in">
+            <h2 id="closer-h">Ready to look at your fields <em>from above?</em></h2>
+            <p>Pick the portal that matches your account. Each one has its own sign-in.</p>
+            <div class="closer-cta">
+              <a class="btn primary" href="/farmer.html">Farmer Portal</a>
+              <a class="btn quiet" href="/government.html">Government Portal</a>
+              <a class="btn quiet" href="/research.html">Researcher Portal</a>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <!-- ============================================================= footer -->
@@ -704,13 +728,13 @@
       <div class="wrap">
         <div class="fgrid">
           <div class="fabout">
-            <a class="logo" href="#top" style="color:var(--hero-ink);text-decoration:none">
-              <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true">
-                <circle cx="16" cy="16" r="15" fill="#2f7d57" />
-                <path d="M16 25c0-6 3-10 8-12-1 7-4 10-8 12z" fill="#b0d4bd" />
-                <path d="M16 25c0-6-3-10-8-12 1 7 4 10 8 12z" fill="#7fb797" />
-                <path d="M16 26V15" stroke="#eff6f1" stroke-width="1.4" stroke-linecap="round" fill="none" />
-                <circle cx="16" cy="9" r="2.2" fill="#ddb45c" />
+            <a class="logo" href="#top">
+              <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+                <circle cx="16" cy="16" r="15" fill="#1a7f4b" />
+                <path d="M16 25c0-6 3-10 8-12-1 7-4 10-8 12z" fill="#bfe5cc" />
+                <path d="M16 25c0-6-3-10-8-12 1 7 4 10 8 12z" fill="#7fc79c" />
+                <path d="M16 26V15" stroke="#effaf3" stroke-width="1.4" stroke-linecap="round" fill="none" />
+                <circle cx="16" cy="9" r="2.2" fill="#e8b84f" />
               </svg>
               <span>Smart Agriculture</span>
             </a>
@@ -721,7 +745,7 @@
           </div>
 
           <div>
-            <h4>Portals</h4>
+            <h3>Portals</h3>
             <ul>
               <li><a href="/farmer.html">Farmer Portal</a></li>
               <li><a href="/government.html">Government Portal</a></li>
@@ -730,17 +754,17 @@
           </div>
 
           <div>
-            <h4>About</h4>
+            <h3>About</h3>
             <ul>
               <li><a href="#how">How it works</a></li>
-              <li><a href="#model">Model &amp; accuracy</a></li>
+              <li><a href="#platform">Platform</a></li>
               <li><a href="#data">Data sources</a></li>
               <li><a href="#access">Access &amp; security</a></li>
             </ul>
           </div>
 
           <div>
-            <h4>Built with</h4>
+            <h3>Built with</h3>
             <ul>
               <li>Sentinel-1 / Sentinel-2</li>
               <li>Google Earth Engine</li>

@@ -92,12 +92,12 @@ const docPath = resolve(root, '..', 'docs', 'step11_temporal_experiment.md')
 if (existsSync(docPath)) {
   const doc = readFileSync(docPath, 'utf8')
   const figures = [...new Set([...html.matchAll(/(?:>|&minus;)(\d\.\d{4})</g)].map((m) => m[1]))]
-  check(figures.length >= 15, `found ${figures.length} quoted figures to verify`)
+  // The Evaluation section was removed from the landing page, so there may be
+  // no quoted figures at all now. Any that come back must still match the doc.
+  console.log(`  --   ${figures.length} quoted figure(s) to verify`)
   for (const f of figures) {
     check(doc.includes(f), `${f} appears in step11_temporal_experiment.md`)
   }
-  check(/five of eleven crops score below zero/i.test(html),
-    'the five-negative-crops caveat is still on the page')
   check(!/9[0-9]%\s*accur/i.test(html),
     'no percentage accuracy claim (docs explicitly warn against one)')
 } else {

@@ -50,7 +50,7 @@ export default function TopBar({
               <select
                 value={selectedId ?? ''}
                 onChange={(e) => onSelect(e.target.value)}
-                className="mt-0.5 max-w-[15rem] truncate bg-transparent text-sm font-medium outline-none"
+                className="mt-0.5 max-w-60 truncate bg-transparent text-sm font-medium outline-none"
                 aria-label="Select farm"
               >
                 {farms.map((f) => (

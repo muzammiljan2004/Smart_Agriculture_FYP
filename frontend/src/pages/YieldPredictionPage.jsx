@@ -49,7 +49,7 @@ function Comparison({ pred, district }) {
               <span className="tnum text-sm font-semibold">{v.toFixed(2)}</span>
             </div>
             <div className="mt-1.5">
-              <Meter value={v} max={top} tone={now ? 'bg-leaf-900' : 'bg-leaf-300'} />
+              <Meter value={v} max={top} tone={now ? 'bg-leaf-700' : 'bg-leaf-200'} />
             </div>
           </div>
         ))}
@@ -133,27 +133,27 @@ export default function YieldPredictionPage({ farm, data }) {
       </PageHead>
 
       <div className="grid gap-5 lg:grid-cols-2">
-        <div className="relative overflow-hidden rounded-2xl bg-leaf-900 p-7 text-leaf-50 shadow-sm">
-          <svg aria-hidden="true" viewBox="0 0 600 200" className="absolute inset-0 h-full w-full opacity-[0.12]">
+        <div className="relative overflow-hidden rounded-2xl border border-leaf-100 bg-linear-to-br from-leaf-50 via-white to-wheat-50 p-7 text-ink shadow-sm">
+          <svg aria-hidden="true" viewBox="0 0 600 200" className="absolute inset-0 h-full w-full opacity-7">
             {Array.from({ length: 10 }, (_, i) => (
               <path key={i} d={'M -20 ' + (20 + i * 22) + ' Q 300 ' + (-10 + i * 22) + ' 620 ' + (40 + i * 22)}
-                    stroke="#d7e9dd" strokeWidth="1.1" fill="none" />
+                    stroke="#1a7f4b" strokeWidth="1.1" fill="none" />
             ))}
           </svg>
           <div className="relative">
-            <p className="text-xs font-semibold uppercase tracking-widest text-leaf-300">Predicted yield</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-leaf-700">Predicted yield</p>
 
             {!pred && !err && !fetching && (
               <div className="mt-3 animate-pulse space-y-3">
-                <div className="h-14 w-40 rounded-lg bg-leaf-800" />
-                <div className="h-3 w-56 rounded bg-leaf-800" />
+                <div className="h-14 w-40 rounded-lg bg-leaf-100" />
+                <div className="h-3 w-56 rounded bg-leaf-100" />
               </div>
             )}
 
             {(err || fetching) && (
               <div className="mt-3">
                 <PredictionGate err={err} fetching={fetching} onFetch={refreshImagery}
-                                crop={farm.crop_type} dark />
+                                crop={farm.crop_type} />
               </div>
             )}
 
@@ -163,25 +163,25 @@ export default function YieldPredictionPage({ farm, data }) {
                   <span className="tnum font-display text-6xl font-semibold leading-none">
                     {yieldNow.toFixed(2)}
                   </span>
-                  <span className="text-xl text-leaf-300">{pred.unit}</span>
+                  <span className="text-xl text-muted">{pred.unit}</span>
                 </p>
 
                 {/* Confidence range on a fixed 0-6 t/ha scale, so the bar's width
                     means something across farms instead of rescaling per result. */}
                 <div className="mt-6 max-w-md">
-                  <div className="relative h-2 rounded-full bg-leaf-800">
-                    <div className="absolute h-2 rounded-full bg-leaf-400/70"
+                  <div className="relative h-2 rounded-full bg-leaf-100">
+                    <div className="absolute h-2 rounded-full bg-leaf-300"
                          style={{ left: (ci[0] / MAX_YIELD) * 100 + '%',
                                   width: ((ci[1] - ci[0]) / MAX_YIELD) * 100 + '%' }} />
                     {pred.district_average != null && (
-                      <div className="absolute -top-2 h-6 w-0.5 bg-leaf-200"
+                      <div className="absolute -top-2 h-6 w-0.5 bg-leaf-700"
                            style={{ left: (pred.district_average / MAX_YIELD) * 100 + '%' }}
                            title={'District average ' + pred.district_average + ' ' + pred.unit} />
                     )}
                     <div className="absolute -top-1 h-4 w-1 rounded-full bg-wheat-400"
                          style={{ left: (pred.predicted_yield / MAX_YIELD) * 100 + '%' }} />
                   </div>
-                  <p className="tnum mt-2 text-xs text-leaf-300">
+                  <p className="tnum mt-2 text-xs text-muted">
                     {ci[0]}–{ci[1]} {pred.unit} · model spread
                   </p>
                 </div>
@@ -189,12 +189,12 @@ export default function YieldPredictionPage({ farm, data }) {
                 <div className="mt-7 flex flex-wrap gap-x-12 gap-y-4">
                   {pred.district_average != null && (
                     <div>
-                      <p className="text-xs uppercase tracking-wide text-leaf-300">
+                      <p className="text-xs uppercase tracking-wide text-muted">
                         vs {farm.district} average
                       </p>
                       <p className="tnum mt-1 text-2xl font-semibold">
                         {pred.vs_district_pct > 0 ? '+' : ''}{pred.vs_district_pct}%
-                        <span className="ml-2 text-sm font-normal text-leaf-300">
+                        <span className="ml-2 text-sm font-normal text-muted">
                           ({pred.district_average} {pred.unit})
                         </span>
                       </p>
@@ -202,10 +202,10 @@ export default function YieldPredictionPage({ farm, data }) {
                   )}
                   {pred.trend_pct != null && (
                     <div>
-                      <p className="text-xs uppercase tracking-wide text-leaf-300">Season on season</p>
+                      <p className="text-xs uppercase tracking-wide text-muted">Season on season</p>
                       <p className="tnum mt-1 text-2xl font-semibold">
                         {pred.trend_pct > 0 ? '▲ +' : '▼ '}{pred.trend_pct}%
-                        <span className="ml-2 text-sm font-normal text-leaf-300">
+                        <span className="ml-2 text-sm font-normal text-muted">
                           over {pred.trend?.length} seasons
                         </span>
                       </p>

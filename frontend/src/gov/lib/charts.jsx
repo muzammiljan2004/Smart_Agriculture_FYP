@@ -56,7 +56,7 @@ export function Bars({ data, w = 560, h = 170, max, min = 0, dec = 1, hi, vals, 
           )
         }
         const bh = Math.max(0, ((Number(d.v) - mn) / (mx - mn)) * (h - pt - pb))
-        const fill = d.c || (i === hi ? 'var(--g900)' : 'var(--g300)')
+        const fill = d.c || (i === hi ? 'var(--g700)' : 'var(--g300)')
         return (
           <g key={i} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}>
             <rect x={x} y={h - pb - bh} width={bw * 0.66} height={bh} rx="2.5"
@@ -289,7 +289,7 @@ export function Donut({ parts, size = 130, center, sub }) {
       })}
       {center && (
         <text x="50%" y={sub ? '49%' : '54%'} textAnchor="middle"
-              style={{ font: '500 22px var(--serif)', fill: 'var(--ink)' }}>
+              style={{ font: '700 22px var(--display)', fill: 'var(--ink)' }}>
           {center}
         </text>
       )}

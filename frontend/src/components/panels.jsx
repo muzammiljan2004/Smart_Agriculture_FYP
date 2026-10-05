@@ -30,7 +30,7 @@ export function HarvestLine({ g }) {
       className={
         'mt-5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 rounded-xl px-4 py-3 ring-1 ' +
         (warn ? 'bg-wheat-300/20 ring-wheat-300/60'
-          : done ? 'bg-black/[0.03] ring-black/5'
+          : done ? 'bg-black/3 ring-black/5'
             : 'bg-leaf-50 ring-leaf-100')
       }
     >
@@ -245,15 +245,15 @@ export function SuitabilityPanel({ data, loading, error, limit }) {
  * because each needs a different action from the farmer. Collapsing them into
  * one message is what used to send people to re-fetch imagery they already had.
  */
-export function PredictionGate({ err, fetching, onFetch, crop, dark = false }) {
+export function PredictionGate({ err, fetching, onFetch, crop }) {
   const wants = needsImagery(err)
   const show = wants || fetching
-  const muted = dark ? 'text-leaf-200' : 'text-muted'
+  const muted = 'text-muted'
 
   if (!show) {
     return (
       <div className="max-w-2xl">
-        <p className={'font-display text-2xl font-semibold ' + (dark ? 'text-wheat-300' : 'text-ink')}>
+        <p className="font-display text-2xl font-semibold text-ink">
           No prediction yet
         </p>
         <p className={'mt-2 text-sm ' + muted}>{err}</p>
@@ -274,7 +274,7 @@ export function PredictionGate({ err, fetching, onFetch, crop, dark = false }) {
 
   return (
     <div className="max-w-2xl">
-      <p className={'font-display text-2xl font-semibold ' + (dark ? 'text-wheat-300' : 'text-ink')}>
+      <p className="font-display text-2xl font-semibold text-ink">
         No prediction yet
       </p>
       <p className={'mt-2 text-sm ' + muted}>

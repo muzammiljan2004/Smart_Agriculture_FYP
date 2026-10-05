@@ -14,6 +14,14 @@ const missing = [
   ['VITE_SUPABASE_ANON_KEY', import.meta.env.VITE_SUPABASE_ANON_KEY],
 ].filter(([, v]) => !v).map(([k]) => k)
 
+// Apply the saved Appearance choice before first paint. Settings writes it, but
+// until now it only took effect once that screen was opened. Light by default.
+try {
+  document.documentElement.setAttribute('data-theme', localStorage.getItem('gov.theme') || 'light')
+} catch {
+  document.documentElement.setAttribute('data-theme', 'light')
+}
+
 const root = ReactDOM.createRoot(document.getElementById('root'))
 
 if (missing.length) {
@@ -22,7 +30,7 @@ if (missing.length) {
       <h1 style={{ font: '600 20px system-ui' }}>Configuration missing</h1>
       <p>This build has no value for:</p>
       <ul>{missing.map((k) => <li key={k}><code>{k}</code></li>)}</ul>
-      <p style={{ color: '#6a796f' }}>
+      <p style={{ color: '#66756b' }}>
         Set them in the host's environment variables and <strong>redeploy</strong> — they are
         baked into the bundle at build time, so changing them has no effect until it is rebuilt.
       </p>

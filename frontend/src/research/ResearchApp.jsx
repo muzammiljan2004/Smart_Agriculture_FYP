@@ -54,7 +54,7 @@ function NoAccess({ deactivated, error }) {
   return (
     <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 20 }}>
       <div className="card" style={{ maxWidth: 480, padding: '24px 22px' }}>
-        <h1 style={{ font: '500 20px var(--serif)', marginBottom: 6 }}>
+        <h1 style={{ font: '700 20px var(--display)', marginBottom: 6 }}>
           {deactivated ? 'This account is deactivated' : 'No researcher portal access'}
         </h1>
         <p className="sub" style={{ marginBottom: 14 }}>

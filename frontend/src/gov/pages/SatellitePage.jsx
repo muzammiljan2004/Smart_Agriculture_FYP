@@ -107,7 +107,7 @@ export default function SatellitePage({ dims, crop, season, cropRow, seasonRow }
                         ].map(([l, v]) => (
                           <div key={l}>
                             <div className="lbl">{l}</div>
-                            <div style={{ font: '500 22px var(--serif)' }}>{v}</div>
+                            <div style={{ font: '700 22px var(--display)' }}>{v}</div>
                           </div>
                         ))}
                       </div>

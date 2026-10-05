@@ -102,8 +102,8 @@ function CropHealth({ pred, err, fetching, onFetch, crop }) {
       <div className="mt-5 grid gap-6 sm:grid-cols-[auto_1fr] sm:items-center">
         <div className="relative grid h-32 w-32 place-items-center">
           <svg viewBox="0 0 36 36" className="absolute h-32 w-32 -rotate-90">
-            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#d7e9dd" strokeWidth="3.4" />
-            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#2f7d57" strokeWidth="3.4"
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#dcf2e4" strokeWidth="3.4" />
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#2f9a62" strokeWidth="3.4"
                     strokeDasharray={`${Math.max(2, Math.min(100, ndvi * 100))} 100`} strokeLinecap="round" />
           </svg>
           <span className={'font-display text-xl font-semibold ' + status[1]}>{status[0]}</span>

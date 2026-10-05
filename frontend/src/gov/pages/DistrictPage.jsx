@@ -117,7 +117,7 @@ export default function DistrictPage({ dims, crop, season, cropRow, seasonRow, d
                     ].map(([l, v]) => (
                       <div key={l}>
                         <div className="lbl">{l}</div>
-                        <div style={{ font: '500 20px var(--serif)' }}>{v}</div>
+                        <div style={{ font: '700 20px var(--display)' }}>{v}</div>
                       </div>
                     ))}
                   </div>

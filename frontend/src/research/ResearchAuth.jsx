@@ -32,16 +32,15 @@ export default function ResearchAuth() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh', display: 'grid', placeItems: 'center',
-      background: 'var(--bg)', padding: 20,
+    <div className="auth-bg" style={{
+      minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 20,
     }}>
       <div className="card" style={{ width: '100%', maxWidth: 400, padding: '26px 24px' }}>
         <div className="brand" style={{ paddingBottom: 14 }}>
           <i><Icon name="leaf" size={13} /></i>
           Smart Agriculture
         </div>
-        <h1 style={{ font: '500 22px var(--serif)', marginBottom: 4 }}>Researcher Portal</h1>
+        <h1 style={{ font: '700 22px var(--display)', marginBottom: 4 }}>Researcher Portal</h1>
         <p className="sub" style={{ marginBottom: 18 }}>
           Dataset access and model evaluation · authorised accounts only
         </p>

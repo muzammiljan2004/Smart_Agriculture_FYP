@@ -39,7 +39,7 @@ const TONES = {
   wheat: 'bg-wheat-300/40 text-wheat-500 ring-wheat-300/60',
   red: 'bg-red-50 text-red-700 ring-red-200',
   blue: 'bg-sky-50 text-sky-700 ring-sky-200',
-  grey: 'bg-black/[0.04] text-muted ring-black/5',
+  grey: 'bg-black/4 text-muted ring-black/5',
 }
 
 export function Badge({ children, tone = 'leaf', className = '' }) {
@@ -174,7 +174,7 @@ export function Modal({ open, onClose, title, sub, children, wide = false }) {
  */
 export function NotWired({ what, why }) {
   return (
-    <div className="rounded-xl bg-black/[0.03] px-4 py-3 text-xs leading-relaxed text-muted ring-1 ring-black/5">
+    <div className="rounded-xl bg-black/3 px-4 py-3 text-xs leading-relaxed text-muted ring-1 ring-black/5">
       <span className="font-semibold text-ink/70">{what}</span> {why}
     </div>
   )

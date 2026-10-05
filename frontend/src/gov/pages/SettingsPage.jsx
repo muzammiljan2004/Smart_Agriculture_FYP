@@ -18,11 +18,12 @@ const THEME_KEY = 'gov.theme'
  *
  * Appearance DOES work: it writes the data-theme attribute the stylesheet already
  * keys on, and localStorage is the right store for a per-viewer display choice.
+ * gov/main.jsx applies the saved value at startup, defaulting to light.
  */
 export default function SettingsPage({ profile, dims }) {
   const [tab, setTab] = useState('account')
   const [theme, setTheme] = useState(() => {
-    try { return localStorage.getItem(THEME_KEY) || 'system' } catch { return 'system' }
+    try { return localStorage.getItem(THEME_KEY) || 'light' } catch { return 'light' }
   })
 
   useEffect(() => {
@@ -30,8 +31,7 @@ export default function SettingsPage({ profile, dims }) {
     // blocked, and a theme preference is not worth taking the screen down for.
     try { localStorage.setItem(THEME_KEY, theme) } catch { /* not persisted */ }
     const root = document.documentElement
-    if (theme === 'system') root.removeAttribute('data-theme')
-    else root.setAttribute('data-theme', theme)
+    root.setAttribute('data-theme', theme)
   }, [theme])
 
   return (
@@ -91,9 +91,9 @@ export default function SettingsPage({ profile, dims }) {
             <div className="field">
               <label htmlFor="st-theme">Theme</label>
               <select id="st-theme" value={theme} onChange={(e) => setTheme(e.target.value)}>
-                <option value="system">Match system</option>
                 <option value="light">Light</option>
                 <option value="dark">Dark</option>
+                <option value="system">Match system</option>
               </select>
             </div>
             <Provenance>
