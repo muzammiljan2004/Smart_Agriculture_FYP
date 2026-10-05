@@ -299,6 +299,27 @@ console.log('\npicking a field location without typing coordinates')
   check('the sampled-area circle is drawn from the same radiusOf as the maps', () =>
     assert.match(picker, /radius=\{radiusOf\(area\)\}/))
 
+  check('the map offers a street layer as well as satellite', () =>
+    assert.ok(/LayersControl/.test(picker) && /openstreetmap\.org/.test(picker)))
+  check('a place can be searched by name', () =>
+    assert.match(picker, /nominatim\.openstreetmap\.org/))
+  // Nominatim's policy is ~1 request/second. Searching per keystroke would
+  // breach it from a single user typing a village name.
+  check('place search fires on submit, not on every keystroke', () =>
+    assert.ok(!/onChange=\{[^}]*search\(\)/.test(picker)))
+
+  // THE BROKEN MARKER, which showed on every map in the app. Icon.Default
+  // PREPENDS its auto-detected imagePath to whatever iconUrl you set, and Vite
+  // inlines these three PNGs as data: URIs because they are under 4 KB -- so
+  // mergeOptions alone produced "/path/" + "data:image/png;base64,..." and 404d
+  // every time. Deleting the override is what makes the option be used verbatim.
+  const farmMap = readFileSync(new URL('../src/components/FarmMap.jsx', import.meta.url), 'utf8')
+  check('the Leaflet default-icon path override is removed', () =>
+    assert.match(farmMap, /delete L\.Icon\.Default\.prototype\._getIconUrl/))
+  check('and it is removed BEFORE the urls are merged in', () =>
+    assert.ok(farmMap.indexOf('delete L.Icon.Default.prototype._getIconUrl')
+              < farmMap.indexOf('L.Icon.Default.mergeOptions')))
+
   const form = readFileSync(new URL('../src/FarmForm.jsx', import.meta.url), 'utf8')
   check('the form no longer ships bare latitude/longitude inputs', () =>
     assert.ok(!/Latitude\s*\n\s*<input/.test(form)))

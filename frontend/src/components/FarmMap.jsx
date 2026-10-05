@@ -7,8 +7,17 @@ import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 
 // Leaflet builds its default marker's <img src> by string-concatenating paths
 // relative to the CSS file. Vite hashes and moves assets at build time, so
-// those paths 404 and every marker renders invisible. Importing the images
-// lets Vite rewrite them to the real hashed URLs.
+// those paths 404 and every marker renders as a broken image. Importing the
+// images lets Vite rewrite them to the real hashed URLs.
+//
+// THE DELETE IS LOAD-BEARING, and leaving it out was why every marker in this
+// app rendered as a broken-image placeholder. Icon.Default overrides
+// _getIconUrl to PREPEND its auto-detected imagePath to the option value
+// (leaflet-src.js:7498), so mergeOptions alone produced
+// "/detected/path/" + "/assets/marker-icon-<hash>.png" -- a 404 on every map.
+// Removing the override falls back to Icon.prototype._getIconUrl, which returns
+// the option verbatim, which is what a bundler-provided URL needs.
+delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
   iconUrl: markerIcon,
   iconRetinaUrl: markerIcon2x,

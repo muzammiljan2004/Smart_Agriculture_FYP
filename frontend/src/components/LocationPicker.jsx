@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Circle, MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet'
+import { Circle, LayersControl, MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import { radiusOf } from './FarmMap'
 import { inPunjab, nearestDistrict, round5 } from '../lib/fieldloc'
 
@@ -53,6 +53,10 @@ export default function LocationPicker({ lat, lng, district, districts, area, on
   const [accuracy, setAccuracy] = useState(null)
   const [manual, setManual] = useState(false)
   const [moves, setMoves] = useState(0)
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState([])
+  const [searching, setSearching] = useState(false)
+  const [searchErr, setSearchErr] = useState(null)
 
   const nLat = Number(lat), nLng = Number(lng)
   const valid = Number.isFinite(nLat) && Number.isFinite(nLng)
@@ -70,6 +74,43 @@ export default function LocationPicker({ lat, lng, district, districts, area, on
   function pick(newLat, newLng, { recenter = false } = {}) {
     onChange(String(newLat), String(newLng))
     if (recenter) recentre()
+  }
+
+  /* Place search via OpenStreetMap's Nominatim.
+   *
+   * THE ONE EXTERNAL SERVICE THIS FORM TALKS TO, and the only one that needs no
+   * API key -- which is why it is here rather than Google's or Mapbox's
+   * geocoder, both of which would mean a billable key in the bundle. The
+   * trade-offs, stated because they are real:
+   *   - it is a free community service with a ~1 request/second policy, so this
+   *     fires on submit, never on keystroke;
+   *   - results for small Punjab villages are patchy, so a failure is worded as
+   *     "try the map" rather than "no such place";
+   *   - the typed query leaves the browser. Nothing about the farm does -- the
+   *     search runs before any farm exists.
+   * Restricted to Pakistan, which removes the Lahore-in-another-country class
+   * of result entirely.
+   */
+  async function search() {
+    const q = query.trim()
+    if (!q) return
+    setSearching(true); setSearchErr(null); setResults([])
+    try {
+      const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=6'
+        + '&countrycodes=pk&q=' + encodeURIComponent(q)
+      const res = await fetch(url, { headers: { Accept: 'application/json' } })
+      if (!res.ok) throw new Error(String(res.status))
+      const json = await res.json()
+      setResults(json)
+      if (!json.length) {
+        setSearchErr(`Nothing found for "${q}". Small villages are often missing from the `
+          + 'map index — try the nearest town, then tap your field.')
+      }
+    } catch {
+      setSearchErr('Place search is unavailable right now. Use your location or tap the map.')
+    } finally {
+      setSearching(false)
+    }
   }
 
   function locate() {
@@ -110,6 +151,47 @@ export default function LocationPicker({ lat, lng, district, districts, area, on
     <div className="mt-5">
       <p className="text-sm font-medium">Where is your field?</p>
 
+      {/* Typing a place name, the way a phone map works. Third way in for the
+          farmer who is not standing in the field and cannot find it by eye --
+          get near the village first, then tap the exact plot. */}
+      <div className="mt-2 flex gap-2">
+        <input
+          type="search" value={query} onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); search() } }}
+          placeholder="Search a village, town or road"
+          aria-label="Search for a place"
+          className="min-w-0 flex-1 rounded-xl border border-leaf-100 bg-card px-4 py-2.5 text-sm
+                     text-ink outline-none transition focus:border-leaf-400 focus:ring-4 focus:ring-leaf-400/15"
+        />
+        <button type="button" onClick={search} disabled={searching || !query.trim()}
+                className="rounded-xl border border-leaf-200 px-4 py-2.5 text-sm font-medium
+                           text-leaf-800 transition hover:bg-leaf-50 disabled:opacity-50">
+          {searching ? 'Searching…' : 'Search'}
+        </button>
+      </div>
+
+      {searchErr && (
+        <p className="mt-2 text-xs text-muted">{searchErr}</p>
+      )}
+
+      {results.length > 0 && (
+        <ul className="mt-2 divide-y divide-leaf-100 overflow-hidden rounded-xl ring-1 ring-leaf-100">
+          {results.map((r) => (
+            <li key={r.place_id}>
+              <button type="button"
+                      onClick={() => {
+                        pick(round5(+r.lat), round5(+r.lon), { recenter: true })
+                        setResults([])
+                      }}
+                      className="block w-full bg-card px-4 py-2.5 text-left text-xs leading-relaxed
+                                 text-ink transition hover:bg-leaf-50">
+                {r.display_name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <button
           type="button" onClick={locate} disabled={geoState === 'locating'}
@@ -148,11 +230,26 @@ export default function LocationPicker({ lat, lng, district, districts, area, on
         <div className="mt-3 overflow-hidden rounded-xl ring-1 ring-leaf-100">
           <MapContainer center={[nLat, nLng]} zoom={15} scrollWheelZoom={false}
                         className="h-[18rem] w-full">
-            <TileLayer
-              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-              attribution="Imagery &copy; Esri"
-              maxZoom={18}
-            />
+            {/* Satellite first, because a farmer recognises their plot by its
+                shape and its neighbours, not by a road name. Street is the
+                fallback for orienting by a road, canal or village -- the same
+                two layers FarmMap offers, so the registration map and every
+                later map behave the same way. */}
+            <LayersControl position="topright">
+              <LayersControl.BaseLayer checked name="Satellite">
+                <TileLayer
+                  url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                  attribution="Imagery &copy; Esri"
+                  maxZoom={18}
+                />
+              </LayersControl.BaseLayer>
+              <LayersControl.BaseLayer name="Street">
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution="&copy; OpenStreetMap contributors"
+                />
+              </LayersControl.BaseLayer>
+            </LayersControl>
             <ClickToPlace onPick={(a, b) => pick(a, b)} />
             <Recentre lat={nLat} lng={nLng} trigger={moves} />
             {/* The circle is the area the pipeline actually reduces over, drawn
