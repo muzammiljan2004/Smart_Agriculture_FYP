@@ -163,10 +163,29 @@ layout and name the missing input rather than estimating.
 - **No storage bucket.** Datasets are registered by reference (`file_url`), not
   uploaded. To wire it: create a private bucket and add a storage policy
   mirroring the `gov_datasets` insert policy.
-- **Account creation is two-step.** The portal cannot create logins, because
-  that needs the Auth Admin API and the service-role key, which must never ship
-  in a browser bundle. Screen 14 takes the auth UID from Studio and grants the
-  tier. A trusted backend endpoint could automate step 1 later.
+- **Account creation is one step, via the ML service.** It used to be two: the
+  portal could not create logins, because that needs the Auth Admin API and the
+  service-role key, which must never ship in a browser bundle, so screen 14 took
+  an auth UID copied out of Studio. That constraint has not changed — the key is
+  still not in the bundle. What changed is that the ML service, which already
+  holds it, now exposes `POST /gov/accounts`. Screen 14 sends the caller's own
+  access token and the service creates the login and the profile together.
+
+  **The hierarchy is re-checked in Python**, in `ml-service/app/accounts.py`
+  `_rules()`, precisely *because* the service key bypasses the insert policies
+  that would otherwise enforce it. Those rules are a transcription of the
+  policies, not a reinterpretation: a super admin may create a district manager,
+  a district manager may create an employee, and a manager's requested district
+  is overwritten with their own — the same outcome
+  `district_id = gov_district_id()` produces in SQL. If a policy changes, that
+  file has to change with it.
+
+  If the profile insert fails, the login is **deleted again**, so a failed
+  attempt does not leave an orphan that can authenticate, has no profile, and
+  holds the email address. Verified against the live database.
+
+  `VITE_ML_API_URL` must be set for this; without it screen 14 says so and
+  points back at Studio.
 - **Flood and anomaly detection are not wired.** Flood needs Sentinel-1
   backscatter at district grain (radar is collected per *farm*); anomaly needs a
   within-season NDVI curve (only one seasonal composite is stored). Screen 10

@@ -308,45 +308,52 @@ function EmployeeView({ profile }) {
 
 function ProvisionForm({ me, tier, dims, say, onDone }) {
   const [form, setForm] = useState({
-    authUserId: '', fullName: '',
+    email: '', password: '', fullName: '',
     designation: 'agriculture_officer',
     districtId: me.tier === 'district_manager' ? me.district_id : (dims.districts[0]?.id ?? ''),
   })
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
+  const [done, setDone] = useState(null)
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
   return (
-    <Card title={`Add a ${TIERS[tier].toLowerCase()}`} sub="Two steps — the login is created first">
-      <Empty what="Step 1: create the login in Supabase Studio.">
-        Authentication › Users › Add user, with “Auto Confirm User” ticked. Copy the new user's
-        UID and paste it below.
-        <br /><br />
-        The portal cannot create logins itself: that needs the Auth Admin API and the service-role
-        key, which must never be in a browser bundle. Shipping one so this form could create users
-        would hand anyone with the page the ability to mint accounts.
-      </Empty>
-
-      <form style={{ marginTop: 12 }} onSubmit={async (e) => {
+    <Card title={`Add a ${TIERS[tier].toLowerCase()}`}
+          sub="Creates the login and the profile together">
+      <form onSubmit={async (e) => {
         e.preventDefault()
-        setBusy(true); setErr(null)
+        setBusy(true); setErr(null); setDone(null)
         try {
           await provisionProfile(me, {
-            authUserId: form.authUserId.trim(),
+            email: form.email.trim().toLowerCase(),
+            password: form.password,
             fullName: form.fullName.trim(),
             tier,
             designation: form.designation,
             districtId: form.districtId,
           })
           say(`${form.fullName} provisioned`)
+          // The password is shown back once, because nobody can retrieve it
+          // afterwards -- it is a bcrypt hash the moment it reaches Supabase.
+          setDone({ email: form.email.trim().toLowerCase(), password: form.password })
+          setForm((f) => ({ ...f, email: '', password: '', fullName: '' }))
           onDone()
         } catch (e2) { setErr(e2) } finally { setBusy(false) }
       }}>
         <div className="field">
-          <label htmlFor="pv-uid">Step 2 — Supabase auth user UID</label>
-          <input id="pv-uid" value={form.authUserId} onChange={set('authUserId')} required
-                 placeholder="00000000-0000-0000-0000-000000000000"
-                 pattern="[0-9a-fA-F-]{36}" />
+          <label htmlFor="pv-email">Email</label>
+          <input id="pv-email" type="email" value={form.email} onChange={set('email')}
+                 required autoComplete="off" placeholder="officer@punjab-agri.gov.pk" />
+        </div>
+        <div className="field">
+          <label htmlFor="pv-pass">Initial password</label>
+          <input id="pv-pass" type="text" value={form.password} onChange={set('password')}
+                 required minLength={8} autoComplete="new-password"
+                 placeholder="at least 8 characters" />
+          <p className="sub">
+            Shown as plain text on purpose — you have to read it out to hand it over, and
+            it cannot be recovered afterwards. Tell them to change it on first sign-in.
+          </p>
         </div>
         <div className="field">
           <label htmlFor="pv-name">Full name</label>
@@ -381,15 +388,29 @@ function ProvisionForm({ me, tier, dims, say, onDone }) {
 
         {err && <div className="err" style={{ marginBottom: 10 }}>
           <b>Could not provision.</b>{err.message}
-          <br />
-          If this says the row violates a policy, the UID may already have a profile, or the
-          district may be outside your scope.
         </div>}
 
+        {done && (
+          <div className="warn" style={{ marginBottom: 10 }}>
+            <b>Account created. Hand these over now.</b>
+            <br />
+            <code>{done.email}</code> · <code>{done.password}</code>
+            <br />
+            The password is a hash from here on — this is the only time it is shown.
+          </div>
+        )}
+
         <Button variant="dark" type="submit" disabled={busy}>
-          {busy ? 'Provisioning…' : `Provision ${TIERS[tier].toLowerCase()}`}
+          {busy ? 'Creating…' : `Create ${TIERS[tier].toLowerCase()}`}
         </Button>
       </form>
+
+      <Provenance>
+        The login is created by the ML service, which holds the service-role key —
+        never by this bundle. It re-checks the hierarchy before writing anything,
+        because that key bypasses row-level security, and it deletes the login again
+        if the profile insert fails so a failed attempt leaves nothing behind.
+      </Provenance>
     </Card>
   )
 }

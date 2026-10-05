@@ -1,0 +1,189 @@
+/* Researcher portal stylesheet.
+ *
+ * IT IMPORTS THE GOVERNMENT PORTAL'S STYLESHEET RATHER THAN RESTATING IT.
+ *
+ * There is no `researcher_portal` design folder in this repository -- the brief
+ * names one as the source of truth and it does not exist (flagged in the
+ * summary). The brief also says to "match existing component patterns already
+ * used elsewhere in the repo exactly", and gov.css IS that pattern: an approved
+ * design for an internal, invite-only analytical portal, with its token set,
+ * grid, dark mode and focus styles already settled. Re-deriving a second visual
+ * language for the same kind of user would produce two portals that look
+ * related but not the same, which is worse than sharing one.
+ *
+ * So: the whole of gov.css, plus only what this portal has and that one does
+ * not -- model status badges, a job progress strip, a confusion matrix, a
+ * permission toggle, a confirmation dialog and a model picker row.
+ *
+ * THE COUPLING IS REAL AND DELIBERATE. A layout change in gov.css reaches this
+ * portal. That is the intended trade: one design system, two consumers. Classes
+ * added below are prefixed `r-` so nothing here can collide with a class the
+ * government portal adds later.
+ */
+@import "../gov/gov.css";
+
+/* ------------------------------------------------------------ status badges
+ *
+ * The brief requires a status badge on every model entry in every picker, and
+ * that non-production models are never hidden by default. Four statuses, four
+ * visually distinct treatments -- production is the only filled one, because it
+ * is the only status that means "this is what the pipeline is serving".
+ */
+.r-badge{
+  display:inline-flex;align-items:center;gap:5px;flex:none;
+  border-radius:20px;padding:2px 9px;font-size:10.5px;font-weight:600;
+  letter-spacing:.02em;white-space:nowrap;border:1px solid transparent;
+}
+.r-badge i{width:5px;height:5px;border-radius:50%;background:currentColor;flex:none}
+.r-badge.production{background:var(--g900);color:#eaf3ec;border-color:var(--g900)}
+.r-badge.approved  {background:var(--g100);color:var(--g700);border-color:var(--g300)}
+.r-badge.candidate {background:var(--amb-bg);color:var(--amb);border-color:var(--amb)}
+.r-badge.archived  {background:transparent;color:var(--mut);border-color:var(--line)}
+/* Job state, not model status. Deliberately a different shape -- a squared
+   chip -- so "running" is never mistaken for a version status at a glance. */
+.r-job{
+  display:inline-flex;align-items:center;gap:6px;border-radius:6px;
+  padding:2px 8px;font-size:10.5px;font-weight:600;
+}
+.r-job.queued   {background:var(--bg);color:var(--mut);border:1px solid var(--line)}
+.r-job.running  {background:var(--blue-bg);color:var(--blue)}
+.r-job.completed{background:var(--g100);color:var(--g700)}
+.r-job.failed   {background:var(--red-bg);color:var(--red)}
+
+/* The running state gets motion, because a job that is working and a job that
+   has stalled look identical otherwise. Honoured only where the viewer has not
+   asked for reduced motion -- gov.css already disables animation globally
+   under that query, and this inherits it. */
+.r-job.running i{
+  width:6px;height:6px;border-radius:50%;background:currentColor;
+  animation:r-pulse 1.1s ease-in-out infinite;
+}
+@keyframes r-pulse{0%,100%{opacity:.25}50%{opacity:1}}
+
+/* ------------------------------------------------------------- model picker
+ *
+ * One row per model version. Multi-select across statuses in a single
+ * comparison run, so the control is a checkbox list rather than a <select> --
+ * a native multi-select cannot show a badge, a date and a metric per option.
+ */
+.r-pick{display:flex;flex-direction:column;gap:6px;max-height:330px;overflow-y:auto;padding:1px}
+.r-pick-row{
+  display:flex;align-items:center;gap:10px;padding:9px 11px;
+  border:1px solid var(--line);border-radius:9px;background:var(--card);
+  cursor:pointer;text-align:left;width:100%;
+}
+.r-pick-row:hover{border-color:var(--g300)}
+.r-pick-row.on{border-color:var(--g500);background:var(--g50)}
+.r-pick-row input{margin:0;flex:none;accent-color:var(--g700)}
+.r-pick-row .grow{min-width:0}
+.r-pick-row b{display:block;font-size:12.5px}
+.r-pick-row .meta{color:var(--mut);font-size:10.5px;margin-top:2px}
+.r-pick-row .num{
+  margin-left:auto;flex:none;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--mut);
+}
+
+/* ------------------------------------------------------------- job console
+ *
+ * Append-only log lines from model_run_logs, polled. Monospace because the
+ * lines carry aligned numbers, and column-reverse so the newest line is
+ * visible without scripting a scroll.
+ */
+.r-console{
+  background:var(--g900);color:#cfe3d5;border-radius:10px;padding:11px 13px;
+  font:11px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  max-height:220px;overflow-y:auto;display:flex;flex-direction:column-reverse;
+}
+.r-console p{white-space:pre-wrap;word-break:break-word}
+.r-console .t{color:#7fae90;margin-right:8px}
+.r-console .err{color:#f0a9a0}
+
+/* ---------------------------------------------------------- confusion matrix
+ *
+ * A table, not a heatmap image: the cell counts have to be readable and
+ * exportable. Intensity is a background tint behind a real number.
+ */
+.r-cm{border-collapse:collapse;font-size:11.5px}
+.r-cm th,.r-cm td{border:1px solid var(--line);padding:6px 10px;text-align:center}
+.r-cm th{background:var(--g50);font-weight:600;color:var(--mut);font-size:10.5px}
+.r-cm td{font-variant-numeric:tabular-nums}
+.r-cm td.diag{font-weight:700}
+.r-cm caption{caption-side:top;text-align:left;color:var(--mut);font-size:10.5px;padding-bottom:6px}
+
+/* --------------------------------------------------------- permission flags
+ *
+ * Two independent switches on screen 11. Rendered as labelled checkboxes
+ * rather than a single role dropdown, because the brief makes them orthogonal:
+ * an account may hold one, both, or neither.
+ */
+.r-flags{display:flex;flex-direction:column;gap:7px}
+.r-flag{
+  display:flex;align-items:flex-start;gap:9px;padding:9px 11px;
+  border:1px solid var(--line);border-radius:9px;background:var(--bg);cursor:pointer;
+}
+.r-flag.on{border-color:var(--g500);background:var(--g50)}
+.r-flag input{margin:2px 0 0;flex:none;accent-color:var(--g700)}
+.r-flag b{display:block;font-size:12px}
+.r-flag span{display:block;color:var(--mut);font-size:10.5px;margin-top:2px;line-height:1.45}
+.r-flag.locked{cursor:default;opacity:.75}
+
+/* ------------------------------------------------------------------ dialog
+ *
+ * Action C's confirmation. A real <dialog> so Escape, focus trapping and the
+ * backdrop come from the platform rather than from a hand-rolled modal -- the
+ * brief requires an explicit confirmation step and the native element is the
+ * one that cannot be dismissed by accident.
+ */
+.r-dialog{
+  border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);
+  padding:0;max-width:520px;width:calc(100% - 32px);box-shadow:0 18px 50px rgba(0,0,0,.22);
+}
+.r-dialog::backdrop{background:rgba(10,20,15,.45)}
+.r-dialog .hd{padding:18px 20px 0}
+.r-dialog .hd h3{font:500 19px/1.25 var(--serif)}
+.r-dialog .hd p{color:var(--mut);font-size:12.5px;margin-top:6px}
+.r-dialog .bd{padding:14px 20px}
+.r-dialog .ft{
+  display:flex;gap:8px;justify-content:flex-end;padding:0 20px 18px;
+}
+.r-warn{
+  background:var(--amb-bg);color:#7d5a10;border-radius:9px;padding:11px 13px;
+  font-size:12px;line-height:1.55;
+}
+.r-warn b{display:block;margin-bottom:3px}
+
+/* -------------------------------------------------------------- lineage
+ *
+ * Parent -> child on screen 8. An indent plus a connector, not a tree widget.
+ */
+.r-lineage{display:flex;align-items:center;gap:7px;color:var(--mut);font-size:10.5px}
+.r-lineage svg{flex:none;opacity:.7}
+
+/* A metric block where the figure matters more than the label. */
+.r-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:10px}
+.r-metric{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--card)}
+.r-metric .k{color:var(--mut);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.r-metric .v{font:500 21px/1.15 var(--serif);margin-top:3px;font-variant-numeric:tabular-nums}
+.r-metric.neg .v{color:var(--red)}
+
+/* Filter bar shared by screens 2, 4, 9 and 10. */
+.r-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-bottom:12px}
+.r-filters .sel{min-width:142px}
+.r-filters .spacer{margin-left:auto}
+
+/* ------------------------------------------------------------- live job banner
+ *
+ * Deliberately the same shape as .err (gov.css) so a run's three outcomes --
+ * working, finished, failed -- all land in one slot and read as one family.
+ * A console that has not printed yet and a job that has stalled look identical
+ * without this, which is the whole reason it exists.
+ */
+.r-live{
+  border:1px solid var(--blue);background:var(--blue-bg);color:var(--blue);
+  border-radius:10px;padding:11px 13px;font-size:11.5px;
+  display:flex;align-items:flex-start;gap:9px;
+}
+.r-live b{display:block;font-weight:600;margin-bottom:2px}
+.r-live i{
+  width:7px;height:7px;border-radius:50%;background:currentColor;
+  flex:none;margin-top:4px;animation:r-pulse 1.1s ease-in-out infinite;
+}

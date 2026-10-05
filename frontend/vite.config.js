@@ -2,15 +2,16 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-// Three entry points, three separate bundles:
+// Four entry points, four separate bundles:
 //   index.html      -> the public landing page (no JS at all, just a stylesheet)
 //   farmer.html     -> the farmer portal       (Tailwind theme, sign-up allowed)
 //   government.html -> the government portal   (its own stylesheet, invite-only)
+//   research.html   -> the researcher portal   (shares the government stylesheet)
 //
-// Declaring all three is required, not optional: once rollupOptions.input is set
+// Declaring all four is required, not optional: once rollupOptions.input is set
 // Vite builds only the entries listed, so dropping one would silently stop
-// shipping that portal. In dev they are served at /, /farmer.html and
-// /government.html.
+// shipping that portal. In dev they are served at /, /farmer.html,
+// /government.html and /research.html.
 //
 // THE FARMER APP MOVED from index.html to farmer.html so that / can be the
 // portal chooser. Anything bookmarked at the bare domain now lands on the
@@ -27,6 +28,7 @@ export default defineConfig({
         landing: 'index.html',
         farmer: 'farmer.html',
         government: 'government.html',
+        research: 'research.html',
       },
     },
   },

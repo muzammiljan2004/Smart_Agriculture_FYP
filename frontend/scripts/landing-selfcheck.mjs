@@ -18,9 +18,10 @@ const fails = []
 const ok = (m) => console.log('  ok   ' + m)
 const check = (cond, m) => (cond ? ok(m) : (fails.push(m), console.log('  FAIL ' + m)))
 
-// Comments are stripped FIRST. index.html deliberately names /researcher.html
-// inside a comment (the reserved path for the unbuilt portal); counting that as
-// a live link would make this check fail on correct markup.
+// Comments are stripped FIRST. index.html still names /researcher.html inside a
+// comment -- the path this card used to reserve before the portal shipped at
+// /research.html -- and counting a commented path as a live link would make
+// this check fail on correct markup.
 const raw = readFileSync(resolve(root, 'index.html'), 'utf8')
 const html = raw.replace(/<!--[\s\S]*?-->/g, '')
 const config = readFileSync(resolve(root, 'vite.config.js'), 'utf8')
@@ -53,11 +54,18 @@ for (const id of sections) {
   check(anchors.includes(id), `section #${id} is linked from the nav`)
 }
 
-console.log('\nthe unbuilt portal')
+// All three portals exist now, so nothing is held back. This block used to
+// assert the researcher CTA WAS aria-disabled; that expectation inverted when
+// the portal shipped, and the check inverted with it rather than being deleted.
+// A live link to a page that is not a registered Vite entry is still the
+// failure worth catching, and the loop above does that for every local href.
+console.log('\nall portals are live')
+check(local.includes('/research.html'),
+  'the researcher portal is linked now that it is built')
+check(!/aria-disabled="true"/.test(html),
+  'no CTA is left disabled')
 check(!local.includes('/researcher.html'),
-  'no live link to /researcher.html while that portal does not exist')
-check(/aria-disabled="true"/.test(html),
-  'the researcher CTA is marked aria-disabled for screen readers')
+  'the researcher link is /research.html, matching the vite entry name')
 
 console.log('\nstatic by construction')
 check(!/<script/.test(html), 'the landing page ships no script tag')

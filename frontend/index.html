@@ -170,14 +170,13 @@
             </article>
 
             <!-- ---------------------------------------------- researcher -->
-            <!-- NOT BUILT YET. The CTA is an aria-disabled span, not an <a> to
-                 /researcher.html: that entry point does not exist, so a link
-                 would 404 in production and this is the first page an evaluator
-                 sees. The path is reserved -- when the portal lands, add
-                 researcher.html beside farmer.html and government.html,
-                 register it in vite.config.js, and swap this span for an
-                 <a href> with class "btn dark cta". -->
-            <article class="pcard soon" aria-labelledby="p-res">
+            <!-- NOW BUILT. This card was an aria-disabled span until the portal
+                 existed. research.html is registered in vite.config.js and the
+                 CTA below is a real link. Note the path is /research.html, not
+                 the /researcher.html this comment used to reserve: the entry is
+                 named after its folder (src/research/), the same way
+                 government.html maps to src/gov/. -->
+            <article class="pcard" aria-labelledby="p-res">
               <span class="pico" aria-hidden="true">
                 <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="11" cy="11" r="6.5" />
@@ -186,24 +185,26 @@
                 </svg>
               </span>
               <h3 id="p-res">Researcher Portal</h3>
-              <p class="who">For researchers <span class="chip info">Planned</span></p>
+              <p class="who">For researchers</p>
               <p class="desc">
                 The dataset and the model behind the forecasts, with the evaluation
                 that says how far to trust them.
               </p>
               <ul class="does">
-                <li>Dataset access and export</li>
-                <li>Model training and evaluation runs</li>
-                <li>Per-crop and per-season performance analysis</li>
-                <li>Feature-ablation experiment results</li>
+                <li>Dataset explorer and versioned snapshots</li>
+                <li>Train, retrain and evaluate model versions</li>
+                <li>Per-crop performance and feature importance</li>
+                <li>Benchmarks against the literature</li>
               </ul>
               <div class="foot">
                 <hr class="sep" />
-                <span class="btn cta" aria-disabled="true">Not yet available</span>
+                <a class="btn dark cta" href="/research.html">Enter Researcher Portal</a>
                 <small class="note">
-                  In development &middot; this portal has not been built. Until it
-                  exists, the evaluation lives in the project&rsquo;s
-                  <span class="mono">docs/</span> folder.
+                  <span class="lock" aria-hidden="true">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+                  </span>
+                  Invite only &middot; no public sign-up. Accounts are issued by a
+                  research lead.
                 </small>
               </div>
             </article>
@@ -724,7 +725,7 @@
             <ul>
               <li><a href="/farmer.html">Farmer Portal</a></li>
               <li><a href="/government.html">Government Portal</a></li>
-              <li>Researcher Portal &mdash; planned</li>
+              <li><a href="/research.html">Researcher Portal</a></li>
             </ul>
           </div>
 

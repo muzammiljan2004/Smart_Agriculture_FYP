@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Smart Agriculture — Researcher Portal</title>
+    <meta name="description" content="Dataset access, model training and evaluation for the Smart Agriculture crop yield prediction project." />
+    <!-- Not indexable: a closed, invite-only portal has nothing to gain from a crawler. -->
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  </head>
+  <body>
+    <!-- A FOURTH VITE ENTRY POINT, not a route inside another portal.
+         The four share the Supabase client and the government portal's
+         stylesheet and chart primitives, and nothing else: different audience,
+         different access rules (this one has no sign-up either). Separate
+         entries mean the farmer bundle does not grow by a byte, and no edit
+         here can break a screen a grower or an official uses. -->
+    <div id="root"></div>
+    <script type="module" src="/src/research/main.jsx"></script>
+  </body>
+</html>

@@ -265,32 +265,51 @@ export const fetchProfiles = () =>
     .order('created_at'))
 
 /**
- * Provision an account.
+ * Provision an account -- login and profile in one step.
  *
- * TWO STEPS, and only the second one happens here. Creating an auth user needs
- * the Admin API and the service_role key, which must never be in a browser
- * bundle -- so the portal cannot create the login itself. The flow is:
+ * ONE STEP NOW, VIA THE ML SERVICE. This used to require an administrator to
+ * add the user in Supabase Studio first and paste the resulting UUID into a
+ * form, because creating an auth user needs the Auth Admin API and the
+ * service_role key, which must never be in a browser bundle.
  *
- *   1. An administrator adds the user in Supabase Studio (or an invite is sent
- *      through the Auth Admin API from a trusted backend).
- *   2. This grants that user their tier, designation and district.
+ * That constraint has not changed -- the key is still not here. What changed is
+ * that the ML service, which already holds it, now exposes POST /gov/accounts.
+ * The browser sends the caller's own access token; the service resolves who is
+ * asking, re-checks the hierarchy in Python (accounts._rules(), a transcription
+ * of the gov_profiles insert policies, because the service key bypasses RLS),
+ * creates the login, inserts the profile, and deletes the login again if the
+ * profile insert fails so a failed attempt leaves nothing behind.
  *
- * `authUserId` is therefore required and is the id from step 1. The alternative
- * -- shipping a service-role key or an unauthenticated edge function that
- * creates users -- would hand anyone holding the bundle the ability to mint
- * accounts, which is a far worse outcome than a two-step invite.
+ * A district manager's `districtId` is ignored by the service and forced to
+ * their own district, exactly as the RLS policy's district_id = gov_district_id()
+ * would have done.
  */
-export async function provisionProfile(me, { authUserId, fullName, tier, designation, districtId }) {
-  const { error } = await supabase.from('gov_profiles').insert({
-    id: authUserId,
-    full_name: fullName,
-    tier,
-    designation: tier === 'employee' ? designation : null,
-    district_id: tier === 'super_admin' ? null : districtId,
-    created_by: me.id,
-    status: 'active',
+export async function provisionProfile(me, { email, password, fullName, tier, designation, districtId }) {
+  const { data: s } = await supabase.auth.getSession()
+  const token = s.session?.access_token
+  if (!token) throw new Error('Your session has expired. Sign in again.')
+  const API = import.meta.env.VITE_ML_API_URL
+  if (!API) {
+    throw new Error(
+      'VITE_ML_API_URL is not set in this build, so accounts cannot be created '
+      + 'from the portal. Set it and rebuild, or add the user in Supabase Studio.'
+    )
+  }
+
+  const res = await fetch(`${API}/gov/accounts`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email, password, full_name: fullName, tier,
+      designation: tier === 'employee' ? designation : null,
+      district_id: tier === 'super_admin' ? null : districtId,
+    }),
   })
-  if (error) throw new Error(error.message)
+  const json = await res.json().catch(() => ({}))
+  // FastAPI puts the refusal in `detail`; it is the accurate reason and is shown
+  // verbatim rather than softened.
+  if (!res.ok) throw new Error(json.detail || `Could not create the account (HTTP ${res.status}).`)
+  return json
 }
 
 export async function updateProfile(id, patch) {

@@ -18,3 +18,8 @@ supabase>=2.9
 python-dotenv>=1.0
 earthengine-api>=1.0
 fpdf2>=2.8
+# Required by FastAPI to parse multipart/form-data, which is how the researcher
+# portal uploads a dataset CSV (POST /research/datasets). FastAPI raises at
+# import time without it and names this package itself, so there is no
+# alternative to choose between.
+python-multipart>=0.0.9

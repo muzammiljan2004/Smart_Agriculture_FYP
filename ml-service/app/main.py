@@ -1,9 +1,10 @@
 from contextlib import asynccontextmanager
-from datetime import date
+from datetime import date, datetime, timezone
+from pathlib import Path
 
 import joblib
 import numpy as np
-from fastapi import Depends, FastAPI, Header, HTTPException, Response
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -45,6 +46,20 @@ async def lifespan(app: FastAPI):
     missing = [c for c in CROPS if c not in _bundle["trained_crops"]]
     if missing:
         print(f"WARNING: model has no training rows for {missing}; those crops will be refused.")
+
+    # A research job runs on a daemon thread, so a restart kills it mid-flight
+    # and leaves the row `running` forever -- a spinner in the portal that
+    # never resolves. Mark those failed on the way up rather than retrying:
+    # a half-trained model silently resuming is worse than one that visibly
+    # did not finish.
+    try:
+        from app import research
+        n = research.reap_stale()
+        if n:
+            print(f"research: marked {n} interrupted job(s) as failed")
+    except Exception as e:  # noqa: BLE001 - never block startup on this
+        print(f"research: could not reap stale jobs ({e})")
+
     yield
 
 
@@ -935,3 +950,243 @@ def farm_lifecycle(farm_id: str, refresh: bool = False,
     state["sowing_date"] = sown.isoformat()
     state["sowing_date_estimated"] = not farm_row.get("planting_date")
     return state
+
+
+# ===========================================================================
+# RESEARCHER PORTAL
+#
+# Two endpoints, and deliberately only two. Everything else the portal needs is
+# a plain table read or write it does straight against Postgres through
+# PostgREST, exactly as the farmer and government portals do -- so there is no
+# CRUD API here that nobody needed.
+#
+# WHERE AUTHORISATION LIVES, which differs between the two:
+#
+#   /research/runs/{id}/start   the model_runs INSERT policies already decided
+#                               whether this account may run or train. A queued
+#                               row that exists is one somebody was allowed to
+#                               create, so this only checks WHO may start it.
+#
+#   /research/datasets          the file has to reach this service's filesystem,
+#                               so the row is written with the service_role key
+#                               -- which BYPASSES RLS. The can_train_models
+#                               check therefore has to happen here in Python.
+#                               This is the one place in the portal where a
+#                               permission is enforced outside a policy, and it
+#                               is enforced because of that bypass, not instead
+#                               of a policy.
+# ===========================================================================
+
+
+def _research_profile(user_id: str) -> dict:
+    """The caller's research_profiles row, or refuse.
+
+    Mirrors public.research_is_super_admin(): a government super admin is a
+    research super admin without a row here, which is the shared tier the brief
+    asks for. Kept in sync with that function by hand -- if one changes the
+    other has to, and the RLS verification script asserts they agree.
+    """
+    rows = (db().table("research_profiles")
+            .select("id, tier, can_run_models, can_train_models, status")
+            .eq("id", user_id).execute().data or [])
+    me = rows[0] if rows else None
+
+    if not me or me["status"] != "active":
+        gov = (db().table("gov_profiles").select("tier, status")
+               .eq("id", user_id).execute().data or [])
+        if gov and gov[0]["status"] == "active" and gov[0]["tier"] == "super_admin":
+            return {"id": user_id, "tier": "super_admin",
+                    "can_run_models": True, "can_train_models": True,
+                    "status": "active", "mirrored_from": "gov_profiles"}
+
+    if not me:
+        raise HTTPException(403, "no researcher portal account for this user")
+    if me["status"] != "active":
+        raise HTTPException(403, "this researcher account is deactivated")
+    return me
+
+
+@app.post("/research/datasets")
+def upload_dataset(
+    file: UploadFile = File(...),
+    description: str = Form(...),
+    user_id: str = Depends(current_user_id),
+):
+    """Validate and register an uploaded temporal dataset.
+
+    Requires can_train_models: the brief folds upload into Action B rather than
+    gating it separately, so an account that may run models but not train them
+    can select an existing dataset_version and cannot add one.
+
+    A MALFORMED FILE IS REJECTED WITH A REASON AND NOTHING IS SAVED -- no row,
+    no file on disk. The brief asks for "a clear UI error, never a silent
+    failure or crash", and a half-registered dataset that later fails at
+    training time is exactly the silent failure it is warning about.
+    """
+    from app import research
+
+    me = _research_profile(user_id)
+    if not me["can_train_models"]:
+        raise HTTPException(
+            403, "uploading a dataset requires can_train_models, which this account "
+                 "does not have. A research lead can grant it on the Access screen."
+        )
+
+    if not (description or "").strip():
+        raise HTTPException(422, "a description is required: it is how this snapshot "
+                                 "is identified on every screen that cites it")
+
+    raw = file.file.read()
+    if len(raw) > 32 * 1024 * 1024:
+        raise HTTPException(413, "dataset is larger than 32 MB")
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        raise HTTPException(422, "file is not UTF-8 text; a CSV export is expected")
+
+    try:
+        count, notes = research.validate_csv(text)
+    except research.DatasetInvalid as e:
+        # 422 with the validator's own message. Nothing is written: the file is
+        # not saved and no dataset_versions row is created.
+        raise HTTPException(422, str(e))
+
+    stem = "".join(c if c.isalnum() or c in "-_" else "_"
+                   for c in Path(file.filename or "upload").stem)[:40] or "upload"
+    name = f"{datetime.now(timezone.utc):%Y%m%dT%H%M%S}_{stem}.csv"
+    dest = research.DATA_DIR / name
+    dest.write_text(text, encoding="utf-8")
+
+    row = (db().table("dataset_versions").insert({
+        "description": description.strip(),
+        # Relative, so the row survives the service moving to another host.
+        "storage_path": f"research/{name}",
+        "record_count": count,
+        "schema_validated": True,
+        "validation_notes": "; ".join(notes),
+        "uploaded_by": user_id,
+    }).execute().data[0])
+
+    return {"dataset_version": row, "record_count": count, "notes": notes}
+
+
+class StartRun(BaseModel):
+    """Nothing in the body. The run row already carries every parameter -- the
+    portal wrote them under RLS -- and accepting them again here would create a
+    second, unpoliced way to set them."""
+
+
+@app.post("/research/runs/{run_id}/start")
+def start_run(run_id: str, user_id: str = Depends(current_user_id)):
+    """Accept a queued run and execute it on a daemon thread.
+
+    Returns as soon as the job is accepted. The portal polls model_runs.
+    job_status and model_run_logs for progress -- there is no queue or realtime
+    channel in this project and this endpoint does not add one.
+
+    The run's PERMISSION was settled by the insert policy that let the row be
+    created. What is checked here is only who may press start on it: the person
+    who queued it, or a lead/super admin. Without that, any account could start
+    another researcher's queued job and the attribution in `triggered_by` would
+    no longer match who caused the work.
+    """
+    from app import research
+
+    me = _research_profile(user_id)
+
+    rows = (db().table("model_runs").select("id, triggered_by, job_status, run_kind")
+            .eq("id", run_id).execute().data or [])
+    if not rows:
+        raise HTTPException(404, f"no model run {run_id}")
+    run = rows[0]
+
+    is_lead = me["tier"] in ("research_lead", "super_admin")
+    if run["triggered_by"] != user_id and not is_lead:
+        raise HTTPException(403, "only the researcher who queued this run, or a "
+                                 "research lead, can start it")
+
+    if run["job_status"] != "queued":
+        # Idempotent rather than an error: a double-click in the UI or a retried
+        # request must not start the same training twice.
+        return {"run_id": run_id, "job_status": run["job_status"], "started": False}
+
+    research.start(run_id)
+    return {"run_id": run_id, "job_status": "running", "started": True}
+
+
+# ===========================================================================
+# ACCOUNT PROVISIONING  (government + researcher portals)
+#
+# One endpoint per portal, both thin wrappers over app/accounts.py.
+#
+# These exist so an administrator can create a login FROM THE UI instead of
+# adding the user in Supabase Studio and pasting a UUID back into a form. The
+# Auth Admin API needs the service_role key, which bypasses RLS and must never
+# reach a browser bundle -- so the key stays here and the browser posts.
+#
+# THE HIERARCHY IS ENFORCED IN PYTHON, in accounts._rules(), precisely BECAUSE
+# the service key bypasses the policies that would otherwise do it. That is the
+# trade for being able to create logins at all, and it is the reason those rules
+# are a line-by-line transcription of the insert policies rather than a
+# re-interpretation of them.
+# ===========================================================================
+
+
+class NewGovAccount(BaseModel):
+    email: str
+    password: str
+    full_name: str
+    tier: str                                  # district_manager | employee
+    designation: str | None = None
+    district_id: str | None = None
+
+
+class NewResearchAccount(BaseModel):
+    email: str
+    password: str
+    full_name: str
+    tier: str                                  # research_lead | researcher
+    can_run_models: bool = False
+    can_train_models: bool = False
+
+
+@app.post("/gov/accounts", status_code=201)
+def create_gov_account(body: NewGovAccount, user_id: str = Depends(current_user_id)):
+    """Create a government portal login and its profile in one step.
+
+    A super admin may create a district manager; a district manager may create
+    an employee in their OWN district, whatever district the request names.
+    """
+    from app import accounts
+
+    try:
+        return accounts.create_account(
+            "gov", user_id,
+            email=body.email, password=body.password, full_name=body.full_name,
+            tier=body.tier, designation=body.designation, district_id=body.district_id,
+        )
+    except accounts.AccountError as e:
+        raise HTTPException(e.status, str(e))
+
+
+@app.post("/research/accounts", status_code=201)
+def create_research_account(body: NewResearchAccount,
+                            user_id: str = Depends(current_user_id)):
+    """Create a researcher portal login and its profile in one step.
+
+    A super admin may create a research lead or a researcher; a lead may create
+    a researcher. The two capability flags apply to a researcher only -- a lead
+    carries both by table constraint.
+    """
+    from app import accounts
+
+    try:
+        return accounts.create_account(
+            "research", user_id,
+            email=body.email, password=body.password, full_name=body.full_name,
+            tier=body.tier,
+            can_run_models=body.can_run_models,
+            can_train_models=body.can_train_models,
+        )
+    except accounts.AccountError as e:
+        raise HTTPException(e.status, str(e))
