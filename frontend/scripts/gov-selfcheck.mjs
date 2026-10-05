@@ -223,6 +223,14 @@ console.log('\none theme preference, reachable from every entry point')
   })
   check(`only the 2 colour-literal uses of bg-white remain (${whites.length})`, () =>
     assert.equal(whites.length, 2))
+
+  // The OPEN select list is painted by the browser from the select's own
+  // background, and every select here is transparent so the pill shows through.
+  // Without an explicit rule on <option> that list stayed grey-on-near-black.
+  for (const [f, token] of [['src/gov/gov.css', '--card'], ['src/index.css', '--color-card']]) {
+    check(`${f} themes the native option list`, () =>
+      assert.match(read(f), new RegExp(`option[\\s\\S]{0,40}background-color: ?var\\(${token}\\)`)))
+  }
 }
 
 console.log(failed === 0 ? '\nALL CHECKS PASSED' : `\n${failed} CHECK(S) FAILED`)

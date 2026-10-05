@@ -125,3 +125,16 @@ body {
 /* Leaflet paints its own light chrome; tone it to match the cards. */
 .leaflet-container { background: var(--color-leaf-900); font-family: var(--font-sans); }
 .leaflet-control-attribution { font-size: 10px; opacity: .7; }
+
+/* The native select popup list, which the browser paints from the select's own
+   background -- and both selects here use `bg-transparent` so the control reads
+   as part of its label pill, leaving the open list with nothing to inherit. On
+   the dark theme that was grey-on-near-black. Setting it on <option> is what
+   reaches the list; the select alone does not, because the list is not a
+   descendant in the layout. Same rule as the two portals (gov.css). */
+select option,
+select optgroup {
+  background-color: var(--color-card);
+  color: var(--color-ink);
+}
+select { accent-color: var(--color-leaf-700); }

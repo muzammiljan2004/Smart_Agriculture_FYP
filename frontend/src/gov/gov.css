@@ -240,3 +240,21 @@ input[type=range]{accent-color:var(--g500);width:100%}
    rather than as one of the page's own actions. */
 .theme-btn{padding:5px 7px;line-height:0;color:var(--mut)}
 .theme-btn:hover{color:var(--ink)}
+
+/* ------------------------------------------------- native select popup list
+ *
+ * The closed control was themed; the OPEN list was not. A browser paints that
+ * list itself, from the select's own background and colour -- and `.sel select`
+ * sets `background:transparent` so the pill shows the bar behind it, which
+ * leaves the popup with nothing to inherit. On a dark theme that produced grey
+ * options on near-black: readable only if you already knew what they said.
+ *
+ * Setting it on <option> is what actually reaches the list; styling the select
+ * alone does not, because the list is not a descendant in the layout. Both are
+ * set so the closed and open states agree.
+ */
+select option,
+select optgroup{background-color:var(--card);color:var(--ink)}
+/* The highlighted row is drawn with the accent colour, which otherwise defaults
+   to the browser's blue and is the one part of the list that is not ours. */
+select{accent-color:var(--g700)}
