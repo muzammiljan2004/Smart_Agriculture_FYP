@@ -13,6 +13,7 @@
  */
 import assert from 'node:assert/strict'
 import { readdirSync, readFileSync } from 'node:fs'
+import { inPunjab, metresBetween, nearestDistrict, round5 } from '../src/lib/fieldloc.js'
 import { districtCells, missingGeometry, PUNJAB_BOUNDS } from '../src/gov/lib/geo.js'
 import { clamp, dash, f1, mean, norm, ramp, yieldDec } from '../src/gov/lib/fmt.js'
 import { toCsv } from '../src/gov/lib/csv.js'
@@ -231,6 +232,76 @@ console.log('\none theme preference, reachable from every entry point')
     check(`${f} themes the native option list`, () =>
       assert.match(read(f), new RegExp(`option[\\s\\S]{0,40}background-color: ?var\\(${token}\\)`)))
   }
+}
+
+
+console.log('\npicking a field location without typing coordinates')
+/* The old form asked for two numbers. Every value in range is a valid
+ * coordinate, so a digit typed wrong by one place moves the field ~11 km with
+ * nothing on screen to show it. These pin the helpers that make the map and GPS
+ * paths trustworthy. */
+{
+  const DISTRICTS = JSON.parse(
+    readFileSync(new URL('../src/FarmForm.jsx', import.meta.url), 'utf8')
+      .match(/export const DISTRICTS = (\{[\s\S]*?\n\})/)[1]
+      .replace(/'/g, '"').replace(/(\w[\w ]*):/g, '"$1":').replace(/""/g, '"')
+      .replace(/,(\s*\})/g, '$1')
+  )
+  check(`all 34 districts parsed from FarmForm (${Object.keys(DISTRICTS).length})`, () =>
+    assert.equal(Object.keys(DISTRICTS).length, 34))
+
+  // Every seeded centroid must sit inside the box the picker warns about, or
+  // the form would warn "outside Punjab" about its own default pin.
+  for (const [name, c] of Object.entries(DISTRICTS)) {
+    check(`${name}'s centroid is inside the Punjab box`, () =>
+      assert.ok(inPunjab(+c.lat, +c.lng)))
+  }
+
+  // A centroid must resolve to its own district, or the "change it to X" hint
+  // would fire on a pin the farmer placed correctly from the dropdown.
+  for (const [name, c] of Object.entries(DISTRICTS)) {
+    check(`${name}'s centroid is nearest ${name}`, () =>
+      assert.equal(nearestDistrict(DISTRICTS, +c.lat, +c.lng).name, name))
+  }
+
+  // Distance sanity. NOT the ~37 km between the two TOWNS: these are GAUL
+  // polygon centroids, as FarmForm's own comment says, and centroid-to-centroid
+  // is 45.5 km. Checked by hand against the components -- 0.157 deg of latitude
+  // is 17.4 km, 0.443 deg of longitude at 31.5N is 42.0 km, and those give 45.5.
+  const km = metresBetween(
+    { lat: +DISTRICTS.Lahore.lat, lng: +DISTRICTS.Lahore.lng },
+    { lat: +DISTRICTS.Sheikhupura.lat, lng: +DISTRICTS.Sheikhupura.lng }) / 1000
+  check(`Lahore to Sheikhupura centroids is about 45 km (${km.toFixed(1)})`, () =>
+    assert.ok(km > 43 && km < 48))
+
+  check('a pin in Karachi is outside the Punjab box', () =>
+    assert.equal(inPunjab(24.86, 67.01), false))
+  check('a pin in Lahore is inside it', () =>
+    assert.equal(inPunjab(31.47, 74.36), true))
+  check('a blank coordinate is not treated as a location', () =>
+    assert.equal(inPunjab(NaN, NaN), false))
+
+  // 5 decimals is ~1 m; a phone reports 7+, which is noise on a field boundary.
+  check('a GPS reading is rounded to about a metre', () =>
+    assert.equal(round5(31.46631234567), 31.46631))
+  check('and rounding does not drift the value', () =>
+    assert.ok(Math.abs(round5(74.35841111) - 74.35841) < 1e-9))
+
+  // The three ways in must all still be present: GPS, map, typed.
+  const picker = readFileSync(new URL('../src/components/LocationPicker.jsx', import.meta.url), 'utf8')
+  check('the GPS path is offered', () => assert.match(picker, /navigator\.geolocation/))
+  check('the map accepts a tap to place the pin', () => assert.match(picker, /useMapEvents/))
+  check('the pin is draggable', () => assert.match(picker, /draggable/))
+  check('typed coordinates remain reachable (the only keyboard path)', () =>
+    assert.match(picker, /<details/))
+  check('a refused permission is explained separately from a failed fix', () =>
+    assert.ok(/PERMISSION_DENIED/.test(picker) && /POSITION_UNAVAILABLE/.test(picker)))
+  check('the sampled-area circle is drawn from the same radiusOf as the maps', () =>
+    assert.match(picker, /radius=\{radiusOf\(area\)\}/))
+
+  const form = readFileSync(new URL('../src/FarmForm.jsx', import.meta.url), 'utf8')
+  check('the form no longer ships bare latitude/longitude inputs', () =>
+    assert.ok(!/Latitude\s*\n\s*<input/.test(form)))
 }
 
 console.log(failed === 0 ? '\nALL CHECKS PASSED' : `\n${failed} CHECK(S) FAILED`)

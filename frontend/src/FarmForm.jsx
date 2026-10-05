@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import LocationPicker from './components/LocationPicker'
 
 // All 34 Punjab districts the pipeline has data for. Must match the CHECK in
 // supabase/migrations/20260927020000_all_punjab_districts.sql, which is itself
@@ -250,25 +251,20 @@ export default function FarmForm({ onCreated, onCancel, chrome = true }) {
           </p>
         )}
 
-        <div className="mt-5 grid grid-cols-2 gap-4">
-          <label className="block text-sm font-medium">
-            Latitude
-            <input
-              type="number" step="any" required min={-90} max={90}
-              value={form.gps_lat} onChange={set('gps_lat')} className={`${field} tnum`}
-            />
-          </label>
-          <label className="block text-sm font-medium">
-            Longitude
-            <input
-              type="number" step="any" required min={-180} max={180}
-              value={form.gps_lng} onChange={set('gps_lng')} className={`${field} tnum`}
-            />
-          </label>
-        </div>
-        <p className="mt-2 text-xs text-muted">
-          Prefilled with {form.district} town centre — adjust to your plot.
-        </p>
+        {/* Was two number inputs prefilled with the district centroid. A farmer
+            does not know their field as 31.4663, and one digit typed wrong puts
+            it 11 km away with nothing on screen to show it -- every value in
+            range is a valid coordinate. GPS, then a satellite map, then the
+            numbers for whoever actually has them. */}
+        <LocationPicker
+          lat={form.gps_lat}
+          lng={form.gps_lng}
+          district={form.district}
+          districts={DISTRICTS}
+          area={form.area_hectares}
+          onChange={(lat, lng) => setForm((f) => ({ ...f, gps_lat: lat, gps_lng: lng }))}
+          onDistrictHint={(d) => setForm((f) => ({ ...f, district: d }))}
+        />
 
         {/* Area sizes the circle the satellite pipeline reduces over. Without
             it every field is assumed to be 1 ha, which for a 10 ha holding
