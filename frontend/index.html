@@ -23,12 +23,38 @@
   </head>
   <body>
     <a class="skip" href="#portals">Skip to portal selection</a>
-    <!-- THEME SWITCH WITHOUT JAVASCRIPT. This checkbox is the control; the
-         stylesheet swaps every colour token under html:has(#theme:checked), and
-         the label in the nav is its visible face. It sits before the nav so the
-         nav's focus ring can follow it with a sibling selector. Not persisted:
-         remembering it would need a script, and this page ships none. -->
+    <!-- THEME SWITCH. This checkbox is the control; the stylesheet swaps every
+         colour token under html:has(#theme:checked), and the label in the nav is
+         its visible face. It sits before the nav so the nav's focus ring can
+         follow it with a sibling selector.
+         The page is otherwise still script-free -- no framework, no analytics,
+         no dependency. The one exception is the eleven lines below, which exist
+         because the choice made here now has to reach the three portals: they
+         share one stored preference (src/lib/theme.js) and a visitor who picks
+         dark here and lands in a light portal reads that as a bug. CSS cannot
+         write storage, so this is the smallest thing that can. -->
     <input class="theme-input" type="checkbox" id="theme" aria-label="Dark green theme" />
+    <script>
+      /* Runs immediately after the input is parsed and before the nav and hero
+         below it, so the restored choice is applied without a flash of the
+         wrong theme. Every storage access is wrapped: it throws in a private
+         window and with site data blocked, and the page must still work then --
+         it just forgets the choice, which is where this page started. */
+      (function () {
+        var box = document.getElementById('theme'), KEY = 'sa.theme';
+        function stored() {
+          try { return localStorage.getItem(KEY) || localStorage.getItem('gov.theme') || 'system'; }
+          catch (e) { return 'system'; }
+        }
+        var t = stored();
+        var dark = t === 'dark' || (t === 'system'
+          && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        box.checked = dark;
+        box.addEventListener('change', function () {
+          try { localStorage.setItem(KEY, box.checked ? 'dark' : 'light'); } catch (e) { /* not persisted */ }
+        });
+      })();
+    </script>
     <!-- Reading-progress hairline, driven by the scroll position in CSS. -->
     <div class="progress" aria-hidden="true"></div>
 

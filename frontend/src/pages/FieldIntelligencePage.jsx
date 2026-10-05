@@ -61,7 +61,7 @@ function ImageryTable({ series, error }) {
       </div>
       <div className="max-h-[32rem] overflow-auto">
         <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-white">
+          <thead className="sticky top-0 bg-card">
             <tr className="border-y border-leaf-100 text-left text-xs text-muted">
               {['Date', 'Source', 'NDVI', 'EVI', 'NDWI', 'SAVI', 'NBR', 'VV', 'VH', 'Cloud %', 'Valid px']
                 .map((h) => <th key={h} className="whitespace-nowrap px-4 py-3 font-medium">{h}</th>)}

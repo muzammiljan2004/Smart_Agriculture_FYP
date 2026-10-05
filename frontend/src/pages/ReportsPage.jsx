@@ -88,7 +88,7 @@ export default function ReportsPage({ farm, farms, selectedId, onSelect }) {
   return (
     <div className="space-y-5">
       <PageHead title="Reports" sub="Download or view reports for any farm">
-        <label className="rounded-xl border border-leaf-200 bg-white px-3 py-1.5">
+        <label className="rounded-xl border border-leaf-200 bg-card px-3 py-1.5">
           <span className="block text-[11px] leading-none text-muted">Farm</span>
           <select value={selectedId ?? ''} onChange={(e) => onSelect(e.target.value)}
                   className="mt-0.5 max-w-[14rem] truncate bg-transparent text-sm font-medium outline-none">

@@ -3,7 +3,7 @@ import { supabase } from '../supabase'
 import GovAuth from './GovAuth'
 import ErrorBoundary from './lib/ErrorBoundary'
 import Icon from './lib/icons'
-import { Toast } from './lib/ui'
+import { ThemeToggle, Toast } from './lib/ui'
 import { roleLabel, groupOf, navTree, screenById, visibleScreens } from './lib/access'
 import { fetchCrops, fetchDistricts, fetchMyProfile, fetchRiskAlerts, fetchSeasons } from './lib/queries'
 import PAGES from './pages'
@@ -194,6 +194,7 @@ export default function GovApp() {
 
           {/* The scope the signed-in account actually has, stated in the chrome
               rather than left to be inferred from a short district list. */}
+          <ThemeToggle />
           <span className="demo-pill hide-m">
             {profile.tier === 'super_admin'
               ? 'Province-wide'

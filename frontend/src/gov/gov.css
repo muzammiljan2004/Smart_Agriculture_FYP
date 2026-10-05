@@ -235,3 +235,8 @@ input[type=range]{accent-color:var(--g500);width:100%}
 /* Provenance strip. Each screen states where its numbers came from, including
    when the answer is "a model fit to data it was trained on". */
 .prov{color:var(--mut);font-size:10.5px;margin-top:8px;line-height:1.5}
+
+/* Theme switch in the header. Square-ish and icon-only so it reads as chrome
+   rather than as one of the page's own actions. */
+.theme-btn{padding:5px 7px;line-height:0;color:var(--mut)}
+.theme-btn:hover{color:var(--ink)}

@@ -1,6 +1,13 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import './index.css'
+import { applyTheme } from './lib/theme'
+
+// Apply the saved light/dark choice before first paint, so a dark-theme
+// viewer never sees a white flash while React mounts. One key across all
+// four entry points -- see src/lib/theme.js.
+applyTheme()
+
 
 // Vite inlines VITE_* variables AT BUILD TIME. If they are absent when the
 // bundle is built -- typically a host like Vercel with no Environment

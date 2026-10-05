@@ -3,7 +3,7 @@ import { supabase } from '../supabase'
 import ResearchAuth from './ResearchAuth'
 import ErrorBoundary from '../gov/lib/ErrorBoundary'
 import Icon from '../gov/lib/icons'
-import { Toast } from '../gov/lib/ui'
+import { ThemeToggle, Toast } from '../gov/lib/ui'
 import { groupOf, navTree, roleLabel, screenById, visibleScreens } from './lib/access'
 import { fetchCrops, fetchDistricts, fetchMyProfile, fetchSeasons } from './lib/queries'
 import PAGES from './pages'
@@ -211,6 +211,7 @@ export default function ResearchApp() {
           {/* What this account can actually DO, stated in the chrome. A
               researcher should not have to discover their own permissions by
               finding a screen that offers nothing. */}
+          <ThemeToggle />
           <span className="demo-pill hide-m">
             {profile.can_run_models && profile.can_train_models ? 'Run + train'
               : profile.can_train_models ? 'Train only'

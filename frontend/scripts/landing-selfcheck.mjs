@@ -68,7 +68,21 @@ check(!local.includes('/researcher.html'),
   'the researcher link is /research.html, matching the vite entry name')
 
 console.log('\nstatic by construction')
-check(!/<script/.test(html), 'the landing page ships no script tag')
+// The page used to assert zero script tags. It now carries exactly one, inline,
+// whose only job is to share the theme choice with the three portals -- CSS can
+// swap the tokens but cannot write localStorage. The assertion is tightened
+// rather than deleted: no framework, no analytics, nothing fetched over the
+// network, which is what "static by construction" was protecting.
+const scripts = html.match(/<script\b[^>]*>/g) ?? []
+check(scripts.length <= 1, `the landing page ships at most one script tag (${scripts.length})`)
+check(scripts.every((s) => !/\bsrc=/.test(s)),
+  'no script is loaded from a URL — nothing is fetched to render this page')
+// It must write the SAME key src/lib/theme.js reads, or the landing page and
+// the portals would each remember a theme the other never sees.
+check(!scripts.length || (/'sa\.theme'/.test(html) && /localStorage\.setItem\(KEY/.test(html)),
+  'the one script stores the theme under the key the portals read (sa.theme)')
+check(!scripts.length || !/\b(fetch|XMLHttpRequest|import\s*\(|eval)\b/.test(html),
+  'the one script talks to nothing and loads nothing')
 check(/rel="stylesheet"/.test(html), 'the landing stylesheet is linked')
 
 console.log('\naccessibility basics')

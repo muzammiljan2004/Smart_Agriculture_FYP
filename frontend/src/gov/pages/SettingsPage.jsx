@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { fmtDate, title } from '../lib/fmt'
 import { Card, Chip, Empty, PageHead, Provenance, TableWrap } from '../lib/ui'
 import { DESIGNATIONS, TIERS, roleLabel } from '../lib/access'
+import { readTheme, setTheme as persistTheme } from '../../lib/theme'
 
-const THEME_KEY = 'gov.theme'
 
 /**
  * Screen 15 — settings.
@@ -22,17 +22,11 @@ const THEME_KEY = 'gov.theme'
  */
 export default function SettingsPage({ profile, dims }) {
   const [tab, setTab] = useState('account')
-  const [theme, setTheme] = useState(() => {
-    try { return localStorage.getItem(THEME_KEY) || 'light' } catch { return 'light' }
-  })
+  // Reads and writes the SHARED preference, so this select and the header
+  // toggle on every portal are two faces of one setting rather than two.
+  const [theme, setTheme] = useState(readTheme)
 
-  useEffect(() => {
-    // Wrapped: localStorage throws in a private window and with site data
-    // blocked, and a theme preference is not worth taking the screen down for.
-    try { localStorage.setItem(THEME_KEY, theme) } catch { /* not persisted */ }
-    const root = document.documentElement
-    root.setAttribute('data-theme', theme)
-  }, [theme])
+  useEffect(() => { persistTheme(theme) }, [theme])
 
   return (
     <>

@@ -1,5 +1,12 @@
 import ReactDOM from 'react-dom/client'
 import './research.css'
+import { applyTheme } from '../lib/theme'
+
+// Apply the saved light/dark choice before first paint, so a dark-theme
+// viewer never sees a white flash while React mounts. One key across all
+// four entry points -- see src/lib/theme.js.
+applyTheme()
+
 
 /* Mirrors src/main.jsx and src/gov/main.jsx: the same env-var check, and the
  * same reason for the DYNAMIC import below. Vite inlines VITE_* at BUILD time,

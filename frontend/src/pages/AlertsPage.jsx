@@ -162,7 +162,7 @@ export default function AlertsPage({ farms }) {
         </Button>
       </PageHead>
 
-      <div className="flex flex-wrap gap-1 rounded-xl bg-white p-1 ring-1 ring-leaf-100">
+      <div className="flex flex-wrap gap-1 rounded-xl bg-card p-1 ring-1 ring-leaf-100">
         {[['all', 'All'], ['critical', 'Critical'], ['warning', 'Warning'],
           ['info', 'Information'], ['resolved', 'Resolved']].map(([id, label]) => (
           <button key={id} onClick={() => setFilter(id)}

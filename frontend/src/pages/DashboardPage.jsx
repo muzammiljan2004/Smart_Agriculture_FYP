@@ -15,7 +15,7 @@ function CriticalBanner({ alert, feature_date, features, onNavigate }) {
       (critical ? 'border-red-700 bg-red-50 ring-red-100'
         : 'border-wheat-400 bg-wheat-300/20 ring-wheat-300/50')}>
       <div className={'grid h-11 w-11 shrink-0 place-items-center rounded-xl ' +
-        (critical ? 'bg-white text-red-700' : 'bg-white text-wheat-500')}>
+        (critical ? 'bg-card text-red-700' : 'bg-card text-wheat-500')}>
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7">
           <path d="M12 3s6 6.5 6 10.5a6 6 0 1 1-12 0C6 9.5 12 3 12 3Z" strokeLinejoin="round" />
         </svg>
@@ -219,7 +219,7 @@ export default function DashboardPage({ farm, data, onNavigate, onAddFarm }) {
 
                 <div className="mt-6 flex flex-wrap items-center gap-2">
                   {pred.vs_district_pct != null && (
-                    <span className="rounded-lg bg-white px-3 py-1.5 text-sm ring-1 ring-leaf-100">
+                    <span className="rounded-lg bg-card px-3 py-1.5 text-sm ring-1 ring-leaf-100">
                       <span className="tnum font-semibold">
                         {pred.vs_district_pct > 0 ? '+' : ''}{pred.vs_district_pct}%
                       </span>

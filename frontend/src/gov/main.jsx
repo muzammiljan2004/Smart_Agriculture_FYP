@@ -1,5 +1,6 @@
 import ReactDOM from 'react-dom/client'
 import './gov.css'
+import { applyTheme } from '../lib/theme'
 
 /* Mirrors src/main.jsx: the same env-var check, and the same reason for the
  * DYNAMIC import below. Vite inlines VITE_* at BUILD time, so a host with no
@@ -14,13 +15,11 @@ const missing = [
   ['VITE_SUPABASE_ANON_KEY', import.meta.env.VITE_SUPABASE_ANON_KEY],
 ].filter(([, v]) => !v).map(([k]) => k)
 
-// Apply the saved Appearance choice before first paint. Settings writes it, but
-// until now it only took effect once that screen was opened. Light by default.
-try {
-  document.documentElement.setAttribute('data-theme', localStorage.getItem('gov.theme') || 'light')
-} catch {
-  document.documentElement.setAttribute('data-theme', 'light')
-}
+// Apply the saved Appearance choice before first paint. Now shared with the
+// farmer app, the researcher portal and the landing page through one key --
+// four entry points on one origin reading as one product. src/lib/theme.js
+// migrates the old `gov.theme` value, so an existing choice is not reset.
+applyTheme()
 
 const root = ReactDOM.createRoot(document.getElementById('root'))
 

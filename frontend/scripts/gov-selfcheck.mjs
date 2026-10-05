@@ -12,6 +12,7 @@
  * dependency, which is why these three modules were kept free of both.
  */
 import assert from 'node:assert/strict'
+import { readdirSync, readFileSync } from 'node:fs'
 import { districtCells, missingGeometry, PUNJAB_BOUNDS } from '../src/gov/lib/geo.js'
 import { clamp, dash, f1, mean, norm, ramp, yieldDec } from '../src/gov/lib/fmt.js'
 import { toCsv } from '../src/gov/lib/csv.js'
@@ -166,6 +167,63 @@ check('null and undefined export as empty, not as the word null', () => {
 check('an empty set exports nothing rather than a bare header', () => {
   assert.equal(toCsv([]), '')
 })
+
+
+console.log('\none theme preference, reachable from every entry point')
+/* The dark token sets already existed in gov.css; what did not exist was any
+ * way to reach them outside the government portal's Settings screen. These
+ * checks pin the three things that make it one preference rather than four:
+ * the same storage key, applied before first paint, with a visible control. */
+{
+  const read = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8')
+  const theme = read('src/lib/theme.js')
+  const KEY = theme.match(/THEME_KEY = '([^']+)'/)?.[1]
+  check(`the shared module names one key (${KEY})`, () => assert.ok(KEY))
+  check('and migrates the government portal\'s old key', () =>
+    assert.match(theme, /gov\.theme/))
+
+  // Before first paint, or a dark-theme viewer gets a white flash on every load.
+  for (const entry of ['src/main.jsx', 'src/gov/main.jsx', 'src/research/main.jsx']) {
+    check(`${entry} applies the saved theme at startup`, () =>
+      assert.match(read(entry), /applyTheme\(\)/))
+  }
+  // No entry point may keep its own key: two stores means two preferences.
+  for (const f of ['src/gov/main.jsx', 'src/gov/pages/SettingsPage.jsx']) {
+    check(`${f} no longer reads a portal-local theme key`, () =>
+      assert.ok(!/localStorage\.getItem\('gov\.theme'\)/.test(read(f))))
+  }
+
+  // A control on every surface -- that is the whole point of the change.
+  check('the government portal renders the toggle', () =>
+    assert.match(read('src/gov/GovApp.jsx'), /<ThemeToggle \/>/))
+  check('the researcher portal renders the toggle', () =>
+    assert.match(read('src/research/ResearchApp.jsx'), /<ThemeToggle \/>/))
+  check('the farmer app renders its own toggle', () =>
+    assert.match(read('src/components/TopBar.jsx'), /useTheme\(\)/))
+  check('the landing page stores under the same key', () =>
+    assert.ok(read('index.html').includes(`'${KEY}'`)))
+
+  // The farmer app had no dark theme at all; it has one now, and it works by
+  // redefining the @theme vars rather than by a sweep of class names.
+  const css = read('src/index.css')
+  check('the farmer stylesheet defines a dark token set', () =>
+    assert.match(css, /:root\[data-theme="dark"\]/))
+  check('and a system variant behind prefers-color-scheme', () =>
+    assert.match(css, /prefers-color-scheme: dark/))
+  check('--color-card exists so surfaces are not literal white', () =>
+    assert.match(css, /--color-card:/))
+  // bg-white cannot be themed. Two deliberate survivors: a switch knob and the
+  // "cloud-masked" legend dot, which mean the colour, not the surface.
+  const whites = ['src/components', 'src/pages', 'src/App.jsx'].flatMap((d) => {
+    const base = new URL('../' + d, import.meta.url)
+    const files = d.endsWith('.jsx') ? [base]
+      : readdirSync(base).map((f) => new URL('../' + d + '/' + f, import.meta.url))
+    return files.filter((f) => f.pathname.endsWith('.jsx'))
+      .flatMap((f) => (readFileSync(f, 'utf8').match(/\bbg-white\b/g) ?? []).map(() => f.pathname))
+  })
+  check(`only the 2 colour-literal uses of bg-white remain (${whites.length})`, () =>
+    assert.equal(whites.length, 2))
+}
 
 console.log(failed === 0 ? '\nALL CHECKS PASSED' : `\n${failed} CHECK(S) FAILED`)
 process.exit(failed ? 1 : 0)

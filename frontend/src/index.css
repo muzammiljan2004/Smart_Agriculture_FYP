@@ -12,6 +12,12 @@
   --color-canvas: #fbfcf8;
   --color-ink: #0f2318;
   --color-muted: #66756b;
+  /* The card/panel surface. It was the literal `bg-white` on 17 elements, which
+     a dark theme cannot reach -- white is white under any token set. As a token
+     it flips with the rest. The two places that still say bg-white mean the
+     colour rather than the surface: a switch knob and the "cloud-masked" legend
+     dot, both of which stay white on purpose. */
+  --color-card: #ffffff;
 
   --color-leaf-50:  #effaf3;
   --color-leaf-100: #dcf2e4;
@@ -29,6 +35,79 @@
   --color-wheat-300: #ecc979;
   --color-wheat-400: #d9a441;
   --color-wheat-500: #b9821c;
+}
+
+/* ---------------------------------------------------------------- dark theme
+ *
+ * Every utility in this app resolves to a theme variable -- `bg-leaf-100` is
+ * `background-color: var(--color-leaf-100)` -- so redefining the variables under
+ * one attribute selector re-themes all eight pages without touching a single
+ * class name. That is the whole reason this is twenty lines rather than a sweep
+ * through every component.
+ *
+ * The values are the government portal's dark set (gov.css), not a second
+ * palette invented here: the two run side by side on one origin and a viewer
+ * moving between them should not see the greens change.
+ *
+ * Duplicated for [data-theme="dark"] and for [data-theme="system"] inside the
+ * media query, matching gov.css. "system" is the default, so a viewer whose OS
+ * is dark gets a dark app without ever finding the toggle.
+ */
+:root[data-theme="dark"],
+:root[data-theme="system"] {
+  --dark-canvas: #0d1611; --dark-card: #132019; --dark-ink: #e6f0ea; --dark-muted: #90a598;
+  --dark-leaf-50: #152a1f; --dark-leaf-100: #1b3a2a; --dark-leaf-200: #23452f;
+  --dark-leaf-300: #2c6446; --dark-leaf-400: #35865a; --dark-leaf-500: #4fbf82;
+  --dark-leaf-600: #35a06a; --dark-leaf-700: #3fae72; --dark-leaf-800: #52bd85;
+  --dark-leaf-900: #1a5e3d;
+  --dark-wheat-50: #2e2612; --dark-wheat-100: #46391a; --dark-wheat-300: #7a6329;
+  --dark-wheat-400: #d9a441; --dark-wheat-500: #e6c171;
+  --dark-red-50: #40201c; --dark-red-100: #512924; --dark-red-600: #e07a6e;
+  --dark-red-700: #ef8c80; --dark-red-800: #f6a79c;
+  --dark-sky-50: #0f2f3a; --dark-sky-200: #1b4657; --dark-sky-400: #6bb3d6; --dark-sky-700: #8fc9e4;
+}
+
+/* The two selectors that actually swap the tokens. Split from the block above
+   so the values are written once: a media query cannot be nested around a
+   custom-property reference and still be overridable by the explicit choice. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-canvas: var(--dark-canvas); --color-card: var(--dark-card);
+  --color-ink: var(--dark-ink); --color-muted: var(--dark-muted);
+  --color-leaf-50: var(--dark-leaf-50); --color-leaf-100: var(--dark-leaf-100);
+  --color-leaf-200: var(--dark-leaf-200); --color-leaf-300: var(--dark-leaf-300);
+  --color-leaf-400: var(--dark-leaf-400); --color-leaf-500: var(--dark-leaf-500);
+  --color-leaf-600: var(--dark-leaf-600); --color-leaf-700: var(--dark-leaf-700);
+  --color-leaf-800: var(--dark-leaf-800); --color-leaf-900: var(--dark-leaf-900);
+  --color-wheat-50: var(--dark-wheat-50); --color-wheat-100: var(--dark-wheat-100);
+  --color-wheat-300: var(--dark-wheat-300); --color-wheat-400: var(--dark-wheat-400);
+  --color-wheat-500: var(--dark-wheat-500);
+  --color-red-50: var(--dark-red-50); --color-red-100: var(--dark-red-100);
+  --color-red-600: var(--dark-red-600); --color-red-700: var(--dark-red-700);
+  --color-red-800: var(--dark-red-800);
+  --color-sky-50: var(--dark-sky-50); --color-sky-200: var(--dark-sky-200);
+  --color-sky-400: var(--dark-sky-400); --color-sky-700: var(--dark-sky-700);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    color-scheme: dark;
+    --color-canvas: var(--dark-canvas); --color-card: var(--dark-card);
+    --color-ink: var(--dark-ink); --color-muted: var(--dark-muted);
+    --color-leaf-50: var(--dark-leaf-50); --color-leaf-100: var(--dark-leaf-100);
+    --color-leaf-200: var(--dark-leaf-200); --color-leaf-300: var(--dark-leaf-300);
+    --color-leaf-400: var(--dark-leaf-400); --color-leaf-500: var(--dark-leaf-500);
+    --color-leaf-600: var(--dark-leaf-600); --color-leaf-700: var(--dark-leaf-700);
+    --color-leaf-800: var(--dark-leaf-800); --color-leaf-900: var(--dark-leaf-900);
+    --color-wheat-50: var(--dark-wheat-50); --color-wheat-100: var(--dark-wheat-100);
+    --color-wheat-300: var(--dark-wheat-300); --color-wheat-400: var(--dark-wheat-400);
+    --color-wheat-500: var(--dark-wheat-500);
+    --color-red-50: var(--dark-red-50); --color-red-100: var(--dark-red-100);
+    --color-red-600: var(--dark-red-600); --color-red-700: var(--dark-red-700);
+    --color-red-800: var(--dark-red-800);
+    --color-sky-50: var(--dark-sky-50); --color-sky-200: var(--dark-sky-200);
+    --color-sky-400: var(--dark-sky-400); --color-sky-700: var(--dark-sky-700);
+  }
 }
 
 body {

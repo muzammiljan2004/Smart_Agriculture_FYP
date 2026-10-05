@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { Button } from './ui'
+import { useTheme } from '../lib/useTheme'
 
 const initials = (s) =>
   (s || '?').split(/[\s@._-]+/).filter(Boolean).slice(0, 2)
@@ -15,6 +16,7 @@ const initials = (s) =>
 export default function TopBar({
   farms, selectedId, onSelect, onAdd, alerts, email, onNavigate, onMenu,
 }) {
+  const { resolved, toggle } = useTheme()
   const [openBell, setOpenBell] = useState(false)
   const [openUser, setOpenUser] = useState(false)
   const bell = useRef(null)
@@ -45,7 +47,7 @@ export default function TopBar({
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
           {farms.length > 0 && (
-            <label className="hidden min-w-0 rounded-xl border border-leaf-200 bg-white px-3 py-1.5 sm:block">
+            <label className="hidden min-w-0 rounded-xl border border-leaf-200 bg-card px-3 py-1.5 sm:block">
               <span className="block text-[11px] leading-none text-muted">Current farm</span>
               <select
                 value={selectedId ?? ''}
@@ -69,11 +71,32 @@ export default function TopBar({
             Add Farm
           </Button>
 
+          {/* Same control and same stored preference as the two portals; only
+              the styling is local, because this app is Tailwind and they are not. */}
+          <button
+            onClick={toggle}
+            title={`Switch to ${resolved === 'dark' ? 'light' : 'dark'} theme`}
+            aria-label={`Switch to ${resolved === 'dark' ? 'light' : 'dark'} theme`}
+            className="rounded-xl border border-leaf-200 bg-card p-2.5 text-ink/70 transition hover:bg-leaf-50"
+          >
+            {resolved === 'dark' ? (
+              <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor"
+                   strokeWidth="1.9" strokeLinecap="round">
+                <circle cx="12" cy="12" r="4.2" />
+                <path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="currentColor">
+                <path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1z" />
+              </svg>
+            )}
+          </button>
+
           <div className="relative" ref={bell}>
             <button
               onClick={() => setOpenBell((v) => !v)}
               aria-label={`Notifications (${unread})`}
-              className="relative rounded-xl border border-leaf-200 bg-white p-2.5 text-ink/70 transition hover:bg-leaf-50"
+              className="relative rounded-xl border border-leaf-200 bg-card p-2.5 text-ink/70 transition hover:bg-leaf-50"
             >
               <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor"
                    strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -85,7 +108,7 @@ export default function TopBar({
             </button>
 
             {openBell && (
-              <div className="absolute right-0 mt-2 w-80 overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-leaf-100">
+              <div className="absolute right-0 mt-2 w-80 overflow-hidden rounded-xl bg-card shadow-lg ring-1 ring-leaf-100">
                 <p className="border-b border-leaf-100 px-4 py-3 text-sm font-semibold">
                   Notifications
                 </p>
@@ -116,7 +139,7 @@ export default function TopBar({
           <div className="relative" ref={user}>
             <button
               onClick={() => setOpenUser((v) => !v)}
-              className="flex items-center gap-2 rounded-xl border border-leaf-200 bg-white py-1.5 pl-1.5 pr-2.5 transition hover:bg-leaf-50"
+              className="flex items-center gap-2 rounded-xl border border-leaf-200 bg-card py-1.5 pl-1.5 pr-2.5 transition hover:bg-leaf-50"
             >
               <span className="grid h-7 w-7 place-items-center rounded-full bg-leaf-100 text-xs font-semibold text-leaf-800">
                 {initials(email)}
@@ -128,7 +151,7 @@ export default function TopBar({
             </button>
 
             {openUser && (
-              <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-leaf-100">
+              <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl bg-card shadow-lg ring-1 ring-leaf-100">
                 <p className="truncate border-b border-leaf-100 px-4 py-3 text-sm text-muted">{email}</p>
                 <button
                   onClick={() => { setOpenUser(false); onNavigate('settings') }}

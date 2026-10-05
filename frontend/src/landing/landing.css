@@ -15,8 +15,12 @@
  * a faintly green off-white ground, one emerald accent, wheat and sky as quiet
  * seconds -- is what every visitor sees first. The nav's toggle switches every
  * token to a deep forest-green variant. The toggle is a CHECKBOX read by
- * html:has(#theme:checked), not a script: this page still ships no JavaScript,
- * which is also why the choice is not remembered across reloads.
+ * html:has(#theme:checked), so the SWITCHING is still pure CSS and this page
+ * still ships no framework, no analytics and nothing fetched over the network.
+ * It now carries eleven inline lines whose only job is to read and write the
+ * one preference the three portals share (src/lib/theme.js): a visitor who
+ * picks dark here and lands in a light portal reads that as a bug, and CSS
+ * cannot write localStorage.
  * Plus Jakarta Sans carries the text; Instrument Serif italic is used only for
  * the emphasised words in headings.
  */

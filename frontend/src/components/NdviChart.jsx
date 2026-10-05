@@ -197,7 +197,7 @@ export default function NdviChart({ points, sownDate }) {
       {hover && (
         <div
           className="pointer-events-none absolute z-10 w-max -translate-x-1/2 -translate-y-full
-                     rounded-xl bg-white px-3 py-2 text-xs text-ink shadow-lg ring-1 ring-leaf-100"
+                     rounded-xl bg-card px-3 py-2 text-xs text-ink shadow-lg ring-1 ring-leaf-100"
           style={{ left: `${(hx / W) * 100}%`, top: `calc(${(hy / H) * 100}% - 10px)` }}
         >
           <p className="font-semibold">{fmtDate(hover.date)}</p>

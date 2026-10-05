@@ -4,7 +4,7 @@ import { INDEX_META } from '../lib/format'
 /** The white panel every page is built from. */
 export function Card({ children, className = '', pad = 'p-6' }) {
   return (
-    <section className={`rounded-2xl bg-white ${pad} shadow-sm ring-1 ring-leaf-100 ${className}`}>
+    <section className={`rounded-2xl bg-card ${pad} shadow-sm ring-1 ring-leaf-100 ${className}`}>
       {children}
     </section>
   )
@@ -54,7 +54,7 @@ export function Button({ children, variant = 'primary', className = '', ...rest 
   const v = {
     primary: 'bg-leaf-700 text-white hover:bg-leaf-800',
     dark: 'bg-leaf-900 text-white hover:bg-leaf-800',
-    ghost: 'border border-leaf-200 bg-white text-leaf-800 hover:bg-leaf-50',
+    ghost: 'border border-leaf-200 bg-card text-leaf-800 hover:bg-leaf-50',
     danger: 'bg-red-700 text-white hover:bg-red-800',
     wheat: 'bg-wheat-400 text-leaf-900 hover:bg-wheat-300',
   }[variant]
@@ -142,7 +142,7 @@ export function Modal({ open, onClose, title, sub, children, wide = false }) {
       role="presentation"
     >
       <div
-        className={`w-full rounded-2xl bg-white shadow-xl ring-1 ring-leaf-100
+        className={`w-full rounded-2xl bg-card shadow-xl ring-1 ring-leaf-100
                     ${wide ? 'max-w-3xl' : 'max-w-2xl'}`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"

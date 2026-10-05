@@ -65,7 +65,7 @@ export default function FarmsPage({ farms, selectedId, onSelect, onNavigate, onA
       </PageHead>
 
       <div className="flex flex-wrap items-center gap-3">
-        <label className="flex flex-1 items-center gap-2 rounded-xl border border-leaf-200 bg-white px-3.5 py-2.5">
+        <label className="flex flex-1 items-center gap-2 rounded-xl border border-leaf-200 bg-card px-3.5 py-2.5">
           <svg viewBox="0 0 20 20" className="h-4 w-4 text-muted" fill="none" stroke="currentColor" strokeWidth="1.8">
             <circle cx="9" cy="9" r="6" /><path d="M14 14l4 4" strokeLinecap="round" />
           </svg>

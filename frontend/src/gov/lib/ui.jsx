@@ -1,6 +1,7 @@
 /** UI atoms, matching the design's class names one-for-one. */
 import { useEffect, useState } from 'react'
 import Icon from './icons'
+import { useTheme } from '../../lib/useTheme'
 
 export const Card = ({ title, sub, right, children, className = '', style }) => (
   <section className={'card ' + className} style={style}>
@@ -169,3 +170,23 @@ export const MapLegendItems = ({ title, items }) => (
 )
 
 export { Icon }
+
+/** Light/dark switch for the portal header.
+ *
+ * The icon shows what a click WILL DO, not what is currently on: a moon on a
+ * light page means "go dark". Labelled for screen readers either way, since the
+ * icon alone cannot carry that distinction.
+ *
+ * Shared by the government and researcher portals, which share this stylesheet;
+ * the farmer app has its own Tailwind-styled one calling the same hook.
+ */
+export function ThemeToggle() {
+  const { resolved, toggle } = useTheme()
+  const next = resolved === 'dark' ? 'light' : 'dark'
+  return (
+    <button className="btn sm theme-btn" onClick={toggle}
+            title={`Switch to ${next} theme`} aria-label={`Switch to ${next} theme`}>
+      <Icon name={resolved === 'dark' ? 'sun' : 'moon'} size={14} />
+    </button>
+  )
+}

@@ -134,7 +134,7 @@ export default function App() {
   return (
     <div className="min-h-screen lg:flex">
       {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-leaf-100 bg-white lg:block">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-leaf-100 bg-card lg:block">
         <Sidebar page={page} tab={tab} onNavigate={goTo} alertCount={openAlerts.length} />
       </aside>
 
@@ -143,7 +143,7 @@ export default function App() {
         <div className="fixed inset-0 z-[1200] lg:hidden" role="presentation"
              onClick={() => setMenu(false)}>
           <div className="absolute inset-0 bg-leaf-900/40 backdrop-blur-sm" />
-          <aside className="absolute inset-y-0 left-0 w-72 bg-white shadow-xl"
+          <aside className="absolute inset-y-0 left-0 w-72 bg-card shadow-xl"
                  onClick={(e) => e.stopPropagation()}>
             <Sidebar page={page} tab={tab} onNavigate={goTo}
                      alertCount={openAlerts.length} onClose={() => setMenu(false)} />
