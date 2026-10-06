@@ -2,8 +2,13 @@
 
 Two rules, both threshold comparisons against a district baseline:
 
-  drought    farm NDWI is >15% below the district's historical mean NDWI
+  drought    farm NDWI is >0.15 INDEX UNITS below the district's mean NDWI
   low_yield  predicted yield is >20% below the district's average yield
+
+The two are measured differently on purpose. Yield is t/ha: a ratio scale with
+a true zero, where "20% below" means something. NDWI is a signed index whose
+zero is a physical boundary rather than an absence, so a percentage of it is
+undefined near zero -- see the comment on the drought rule.
 
 Thresholds live in one place so they can be tuned without touching the trigger
 logic, and the logic itself does not care whether the baselines came from
@@ -16,7 +21,7 @@ from email.message import EmailMessage
 
 from app.db import db
 
-DROUGHT_NDWI_DROP = 0.15    # 15% below district mean NDWI
+DROUGHT_NDWI_GAP = 0.15     # absolute NDWI units below the district mean
 LOW_YIELD_DROP = 0.20       # 20% below district average yield
 
 
@@ -63,16 +68,29 @@ def evaluate(farm: dict, prediction, features: dict) -> list[dict]:
     district = farm["district"]
 
     # --- drought -----------------------------------------------------------
+    #
+    # MEASURED AS A GAP IN INDEX UNITS, NOT AS A PERCENTAGE. NDWI is a signed
+    # index on [-1, 1] whose zero is a real physical value (roughly the
+    # water/non-water boundary), not an absence. Dividing by it is only
+    # meaningful on a ratio scale, and against a district mean near zero it
+    # produces absurdities: a farm at -0.050 against a baseline of 0.002 read as
+    # "3074% below", which tells a farmer nothing and discredits every other
+    # number on the card. The old guard `baseline > 0` did not catch it because
+    # 0.002 is greater than zero.
+    #
+    # A gap of 0.15 NDWI is a large, real difference -- a season spans roughly
+    # -0.3 to 0.5 -- so the threshold keeps its value while its MEANING changes
+    # from "15% of the baseline" to "0.15 index units below it".
     baseline = district_mean_ndwi(district, exclude_farm_id=farm.get("id"))
     ndwi = features.get("ndwi")
-    if baseline and baseline > 0 and ndwi is not None:
-        drop = (baseline - ndwi) / baseline
-        if drop > DROUGHT_NDWI_DROP:
+    if baseline is not None and ndwi is not None:
+        gap = baseline - ndwi
+        if gap > DROUGHT_NDWI_GAP:
             out.append({
                 "type": "drought",
-                "severity": "critical" if drop > 0.30 else "warning",
+                "severity": "critical" if gap > 0.30 else "warning",
                 "message": (
-                    f"Canopy water (NDWI {ndwi:.3f}) is {drop * 100:.0f}% below the "
+                    f"Canopy water (NDWI {ndwi:.3f}) is {gap:.3f} below the "
                     f"{district} average of {baseline:.3f}. Check irrigation."
                 ),
             })
@@ -164,8 +182,14 @@ def sync(farm: dict, candidates: list[dict]) -> list[dict]:
             "farm_id": farm["id"], "type": c["type"],
             "message": c["message"], "severity": c["severity"],
         }).execute()
-        send_email(farm, c)
-        if row.data:
+        # STAMP ONLY ON SUCCESS. send_email returns False -- without raising --
+        # when GMAIL_USER/GMAIL_APP_PASSWORD are unset, when the owner has no
+        # resolvable address, and when SMTP fails. Discarding that result and
+        # stamping emailed_at regardless made every alert claim "Emailed" on a
+        # deployment with no mail configured at all. The screens already render
+        # the other case honestly ("In app only" / "Not sent"); they were being
+        # fed a column that was never false.
+        if send_email(farm, c) and row.data:
             db().table("alerts").update({"emailed_at": "now()"}).eq("id", row.data[0]["id"]).execute()
 
     # Condition no longer met -> close it.
@@ -251,13 +275,37 @@ if __name__ == "__main__":
     # separate copy and stubbing it would have no effect here.
     globals()["district_mean_ndwi"] = lambda d, exclude_farm_id=None: 0.30
 
-    a = evaluate(farm, P, {"ndwi": 0.20})          # 33% below -> critical drought
+    a = evaluate(farm, P, {"ndwi": -0.05})         # gap 0.35 -> critical drought
     types = {x["type"]: x for x in a}
     assert "drought" in types and types["drought"]["severity"] == "critical", a
     assert "low_yield" in types, a                 # 2.0 vs 3.2 = 37.5% below
 
-    a = evaluate(farm, P, {"ndwi": 0.29})          # 3% below -> no drought
+    a = evaluate(farm, P, {"ndwi": 0.20})          # gap 0.10 -> under threshold
     assert "drought" not in {x["type"] for x in a}, a
+
+    a = evaluate(farm, P, {"ndwi": 0.10})          # gap 0.20 -> warning, not critical
+    assert {x["type"]: x for x in a}["drought"]["severity"] == "warning", a
+
+    # THE 3074% BUG. A district mean near zero used to be divided into, which
+    # turned a 0.052 gap into "3074% below". The message must now read in index
+    # units, and must contain no percentage at all.
+    globals()["district_mean_ndwi"] = lambda d, exclude_farm_id=None: 0.002
+    a = evaluate(farm, P, {"ndwi": -0.050})        # gap 0.052 -> under 0.15
+    assert "drought" not in {x["type"] for x in a}, a
+
+    globals()["district_mean_ndwi"] = lambda d, exclude_farm_id=None: 0.02
+    a = evaluate(farm, P, {"ndwi": -0.40})         # gap 0.42 against a tiny baseline
+    msg = {x["type"]: x for x in a}["drought"]["message"]
+    assert "%" not in msg, msg
+    assert "0.420 below" in msg, msg
+
+    # A negative district mean is a real reading (open water, flooded field),
+    # and used to be rejected outright by the `baseline > 0` guard.
+    globals()["district_mean_ndwi"] = lambda d, exclude_farm_id=None: -0.10
+    a = evaluate(farm, P, {"ndwi": -0.40})         # gap 0.30
+    assert "drought" in {x["type"] for x in a}, a
+
+    globals()["district_mean_ndwi"] = lambda d, exclude_farm_id=None: 0.30
 
     class Q:
         predicted_yield = 3.1

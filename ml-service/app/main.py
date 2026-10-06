@@ -1032,13 +1032,35 @@ def upload_dataset(
                  "does not have. A research lead can grant it on the Access screen."
         )
 
-    if not (description or "").strip():
+    description = (description or "").strip()
+    if not description:
         raise HTTPException(422, "a description is required: it is how this snapshot "
                                  "is identified on every screen that cites it")
+    # Bounded because it is rendered in every picker, table and run report. An
+    # unbounded Form field would otherwise put an arbitrarily long string into
+    # a <select> option on five screens.
+    if len(description) > 300:
+        raise HTTPException(422, "the description must be 300 characters or fewer "
+                                 f"(got {len(description)})")
 
-    raw = file.file.read()
-    if len(raw) > 32 * 1024 * 1024:
-        raise HTTPException(413, "dataset is larger than 32 MB")
+    # READ IN BOUNDED CHUNKS, NOT ALL AT ONCE. The size check used to run after
+    # file.file.read(), which means a 2 GB upload was fully materialised in
+    # memory before being told it was too big -- the check announced the limit
+    # without enforcing it. Stopping one chunk past the cap bounds the memory a
+    # single request can cost, whatever Content-Length claimed.
+    LIMIT = 32 * 1024 * 1024
+    chunks, size = [], 0
+    while True:
+        chunk = file.file.read(1024 * 1024)
+        if not chunk:
+            break
+        size += len(chunk)
+        if size > LIMIT:
+            raise HTTPException(413, "dataset is larger than 32 MB")
+        chunks.append(chunk)
+    raw = b"".join(chunks)
+    if not raw:
+        raise HTTPException(422, "the uploaded file is empty")
     try:
         text = raw.decode("utf-8-sig")
     except UnicodeDecodeError:

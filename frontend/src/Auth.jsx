@@ -33,7 +33,7 @@ export default function Auth() {
       eyebrow="Farmer Portal"
       title="Wheat yield, forecast"
       accent="from orbit."
-      lead="Sentinel-2 imagery over Sheikhupura, reduced to vegetation indices and run through a Random Forest — a yield estimate weeks before harvest."
+      lead="Sentinel-2 imagery over Punjab, reduced to vegetation indices and run through a Random Forest — a yield estimate weeks before harvest."
       points={[
         'Satellite crop monitoring, field by field',
         'Yield forecasts for your registered farms',
@@ -41,7 +41,7 @@ export default function Auth() {
       ]}
       stats={[['10 m', 'resolution'], ['5 day', 'revisit'], ['t/ha', 'output']]}
     >
-      <span className="au-badge">Farmer portal · Sheikhupura, Punjab</span>
+      <span className="au-badge">Farmer portal</span>
       <h2>{mode === 'login' ? 'Welcome back' : 'Create your account'}</h2>
       <p className="au-sub">
         {mode === 'login'
@@ -59,9 +59,17 @@ export default function Auth() {
           label="Email" icon="mail" type="email" required value={email}
           onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email"
         />
+        {/* minLength on SIGNUP only. On login it would validate a credential
+            that already exists -- an account created under an older, shorter
+            rule could no longer sign in, and the form would refuse before the
+            server ever got a chance to say "wrong password". 8 matches the
+            minimum the government and researcher portals enforce (accounts.py
+            MIN_PASSWORD), so one policy covers every account on the platform. */}
         <AuthField
-          label="Password" icon="lock" type="password" required minLength={6} value={password}
-          onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters"
+          label="Password" icon="lock" type="password" required value={password}
+          minLength={mode === 'signup' ? 8 : undefined}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder={mode === 'signup' ? 'At least 8 characters' : 'Your password'}
           autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
         />
 
@@ -72,10 +80,7 @@ export default function Auth() {
         </AuthSubmit>
       </form>
 
-      <AuthNote>
-        You see only your own farms — enforced by the database's row-level security,
-        not by the interface.
-      </AuthNote>
+      
     </AuthShell>
   )
 }

@@ -539,6 +539,33 @@ def _bucket(v: float) -> str:
 
 # ----------------------------------------------------------------- training
 
+def _bounded_int(config: dict, key: str, default: int, lo: int, hi: int) -> int:
+    """One hyper-parameter, coerced and range-checked.
+
+    THE BROWSER'S min/max ARE NOT A CONTROL HERE. The model_runs row is inserted
+    by the CLIENT -- the insert policy pins status, job_status and the metric
+    columns, but run_config is free-form JSON, so anything that can reach
+    PostgREST can ask this service for any hyper-parameter it likes. Unbounded,
+    `n_estimators: 50000000` is a worker thread that never returns and a process
+    that runs the host out of memory, from an ordinary researcher account.
+    Bounds match the portal's inputs, so a legitimate user never meets them.
+
+    A non-numeric value is rejected with its own message rather than raising a
+    bare ValueError, which would surface to the screen as an unexplained
+    "invalid literal for int()".
+    """
+    raw = config.get(key)
+    if raw is None or raw == "":
+        return default
+    try:
+        v = int(float(raw))
+    except (TypeError, ValueError):
+        raise DatasetInvalid(f"{key} must be a whole number, got {raw!r}.") from None
+    if not lo <= v <= hi:
+        raise DatasetInvalid(f"{key} must be between {lo} and {hi}, got {v}.")
+    return v
+
+
 def _fit_sklearn(model_type: str, X, y, config: dict):
     """Fit one of the sklearn-API models. RandomForest today; XGBoost drops in
     here unchanged once the package is installed."""
@@ -546,8 +573,8 @@ def _fit_sklearn(model_type: str, X, y, config: dict):
 
     if model_type == "RandomForest":
         return RandomForestRegressor(
-            n_estimators=int(config.get("n_estimators", 500)),
-            max_depth=int(config["max_depth"]) if config.get("max_depth") else 25,
+            n_estimators=_bounded_int(config, "n_estimators", 500, 10, 2000),
+            max_depth=_bounded_int(config, "max_depth", 25, 2, 60),
             random_state=42,
             n_jobs=-1,
         ).fit(X, y)
@@ -614,7 +641,14 @@ def _run_training(run: dict) -> dict:
     X, y, feats = _load_matrix(path, scope)
     _log(run_id, f"{len(y)} rows, {len(feats)} features: {', '.join(feats)}")
 
-    ratio = float(config.get("train_split", 0.8))
+    # Range-checked already; the cast is guarded too, because a non-numeric
+    # train_split in the client-written run_config would otherwise surface as a
+    # bare "could not convert string to float" with no indication of which field.
+    raw_ratio = config.get("train_split", 0.8)
+    try:
+        ratio = float(raw_ratio)
+    except (TypeError, ValueError):
+        raise DatasetInvalid(f"train_split must be a number, got {raw_ratio!r}.") from None
     if not 0.1 <= ratio <= 0.95:
         raise DatasetInvalid(f"train_split must be between 0.1 and 0.95, got {ratio}.")
     Xtr, Xte, ytr, yte = _split(X, y, ratio)

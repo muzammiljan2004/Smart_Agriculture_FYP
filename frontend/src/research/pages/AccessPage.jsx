@@ -235,7 +235,7 @@ export default function AccessPage({ profile, say }) {
               </div>
               <div className="field">
                 <label htmlFor="ac-name">Full name</label>
-                <input id="ac-name" value={form.fullName} required
+                <input id="ac-name" value={form.fullName} required maxLength={120}
                        onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
               </div>
             </div>

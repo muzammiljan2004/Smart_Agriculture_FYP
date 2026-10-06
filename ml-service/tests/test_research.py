@@ -327,6 +327,51 @@ check(_report([1.0, 2.0], [1.0, 2.0], feats=["ndvi"], n_train=0, n_test=2,
               started=_t.time())["scope"] is None,
       "an unscoped run records scope as null rather than omitting it")
 
+print("\nhyper-parameters are bounded server-side, not just in the browser")
+# The model_runs row is inserted by the CLIENT. run_config is free-form JSON, so
+# the portal's min/max attributes are a typing aid and nothing more -- anything
+# that reaches PostgREST can ask this service to fit any forest it likes.
+# Unbounded, n_estimators: 50000000 is a thread that never returns.
+from app.research import _bounded_int
+
+check(_bounded_int({}, "n_estimators", 500, 10, 2000) == 500,
+      "an absent value falls back to the default")
+check(_bounded_int({"n_estimators": ""}, "n_estimators", 500, 10, 2000) == 500,
+      "an empty string falls back too, rather than raising")
+check(_bounded_int({"n_estimators": "250"}, "n_estimators", 500, 10, 2000) == 250,
+      "a numeric string is accepted (JSON from the browser is often a string)")
+check(_bounded_int({"n_estimators": 250.0}, "n_estimators", 500, 10, 2000) == 250,
+      "a float is coerced rather than refused")
+
+for bad, why in [(50_000_000, "a forest that would never finish"),
+                 (0, "below the floor"),
+                 (-5, "negative")]:
+    try:
+        _bounded_int({"n_estimators": bad}, "n_estimators", 500, 10, 2000)
+        check(False, f"{bad} is refused ({why})")
+    except DatasetInvalid as e:
+        check("between 10 and 2000" in str(e), f"{bad} is refused, with the range stated")
+
+try:
+    _bounded_int({"max_depth": "deep"}, "max_depth", 25, 2, 60)
+    check(False, "a non-numeric hyper-parameter is refused")
+except DatasetInvalid as e:
+    check("whole number" in str(e) and "max_depth" in str(e),
+          f"a non-numeric value names the field ({e})")
+
+# The bounds must match what the portal offers, or a legitimate user meets them.
+src = (Path(__file__).resolve().parents[1] / "app" / "research.py").read_text(encoding="utf-8")
+check('_bounded_int(config, "n_estimators", 500, 10, 2000)' in src,
+      "estimators bound matches the portal input (10-2000)")
+check('_bounded_int(config, "max_depth", 25, 2, 60)' in src,
+      "depth bound matches the portal input (2-60)")
+
+ui = (Path(__file__).resolve().parents[2] / "frontend" / "src" / "research"
+      / "pages" / "OperationsPage.jsx").read_text(encoding="utf-8")
+check('min="10" max="2000"' in ui, "the browser offers the same estimator range")
+check('min="2" max="60"' in ui, "the browser offers the same depth range")
+check('min="0.1" max="0.95"' in ui, "the browser offers the same split range")
+
 print("\nyield buckets")
 check(_bucket(0.9) == "low" and _bucket(2.0) == "moderate"
       and _bucket(3.6) == "good" and _bucket(9.0) == "high",

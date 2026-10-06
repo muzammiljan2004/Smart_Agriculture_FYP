@@ -357,7 +357,7 @@ function ProvisionForm({ me, tier, dims, say, onDone }) {
         </div>
         <div className="field">
           <label htmlFor="pv-name">Full name</label>
-          <input id="pv-name" value={form.fullName} onChange={set('fullName')} required />
+          <input id="pv-name" value={form.fullName} onChange={set('fullName')} required maxLength={120} />
         </div>
 
         {tier === 'employee' && (

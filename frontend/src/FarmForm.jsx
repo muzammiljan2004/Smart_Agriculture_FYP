@@ -213,6 +213,7 @@ export default function FarmForm({ onCreated, onCancel, chrome = true }) {
             required
             value={form.farmer_name}
             onChange={set('farmer_name')}
+            maxLength={120}
             placeholder="e.g. Muhammad Aslam"
             className={field}
           />

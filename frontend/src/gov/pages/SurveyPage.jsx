@@ -298,7 +298,7 @@ function SurveyForm({ dims, profile, say, onDone }) {
             <label htmlFor="sv-obs">
               {form.survey_type === 'crop_type' ? 'Crop observed in the field' : 'Progress observed'}
             </label>
-            <input id="sv-obs" value={form.observed_value} onChange={set('observed_value')}
+            <input id="sv-obs" value={form.observed_value} onChange={set('observed_value')} maxLength={200}
                    placeholder={form.survey_type === 'crop_type' ? 'e.g. wheat, intercropped with onion'
                      : 'e.g. about 60% cut'} required />
           </div>

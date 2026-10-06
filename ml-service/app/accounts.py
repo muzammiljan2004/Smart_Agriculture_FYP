@@ -43,6 +43,12 @@ EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 # password an admin types into a form is the one that tends to survive.
 MIN_PASSWORD = 8
 
+# A district_id that is not a UUID reaches Postgres as a cast error, which
+# surfaces to the screen as a driver message rather than something the user
+# can act on. Checked here so the refusal names the field.
+UUID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+                     r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+
 GOV_DESIGNATIONS = ("agriculture_officer", "district_officer", "analyst")
 
 
@@ -100,13 +106,30 @@ def _rules(portal: str, me: dict, tier: str) -> None:
 
 
 def _validate(email: str, password: str, full_name: str) -> None:
+    """Every bound this endpoint enforces, in one place.
+
+    UPPER bounds as well as lower ones. The service key bypasses RLS, so this
+    function is the only thing between a request body and auth.users -- and a
+    field with a minimum but no maximum is still unvalidated. A 10 MB full_name
+    is a row that every roster, picker and audit screen then has to render.
+    """
     if not EMAIL_RE.match(email or ""):
         raise AccountError("That does not look like an email address.", 422)
+    if len(email) > 254:                      # RFC 5321 maximum path length
+        raise AccountError("That email address is too long.", 422)
     if len(password or "") < MIN_PASSWORD:
         raise AccountError(
             f"The password must be at least {MIN_PASSWORD} characters.", 422)
-    if not (full_name or "").strip():
+    # bcrypt silently truncates past 72 BYTES, so anything longer is a password
+    # whose tail does not affect the hash -- refused rather than accepted on
+    # terms the user is not told about.
+    if len(password.encode("utf-8")) > 72:
+        raise AccountError("The password must be 72 bytes or fewer.", 422)
+    name = (full_name or "").strip()
+    if not name:
         raise AccountError("A full name is required.", 422)
+    if len(name) > 120:
+        raise AccountError("The full name must be 120 characters or fewer.", 422)
 
 
 def create_account(portal: str, caller_id: str, *, email: str, password: str,
@@ -143,6 +166,8 @@ def create_account(portal: str, caller_id: str, *, email: str, password: str,
             district_id = me["district_id"]
         if not district_id:
             raise AccountError("A district is required for this tier.", 422)
+        if not UUID_RE.match(str(district_id)):
+            raise AccountError("That district id is not a valid identifier.", 422)
 
         profile = {
             "full_name": full_name, "tier": tier, "designation": designation,

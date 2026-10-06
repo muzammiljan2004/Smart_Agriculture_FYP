@@ -107,7 +107,7 @@ export default function BenchmarkPage({ profile, say }) {
       <div className="grid g2" style={{ marginBottom: 0 }}>
         <div className="field">
           <label>Citation</label>
-          <input value={row.citation ?? ''}
+          <input value={row.citation ?? ''} maxLength={300}
                  onChange={(e) => setDraft({ ...row, citation: e.target.value })} />
         </div>
         <div className="field">
@@ -128,7 +128,7 @@ export default function BenchmarkPage({ profile, say }) {
       </div>
       <div className="field">
         <label>Notes</label>
-        <textarea rows={2} value={row.notes ?? ''}
+        <textarea rows={2} maxLength={1000} value={row.notes ?? ''}
                   onChange={(e) => setDraft({ ...row, notes: e.target.value })} />
       </div>
       {err && <div className="err">{err}</div>}
