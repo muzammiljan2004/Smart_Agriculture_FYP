@@ -8,6 +8,7 @@ import { canReviewSurvey, canSubmitSurvey } from '../lib/access'
 import { districtCells } from '../lib/geo'
 import { fetchSurveys, reviewSurvey, submitSurvey } from '../lib/queries'
 import { useQuery } from '../lib/useQuery'
+import { dbError } from '../../lib/dbError'
 
 const TYPES = {
   crop_type: ['Crop type', '#e0a23a'],
@@ -323,7 +324,7 @@ function SurveyForm({ dims, profile, say, onDone }) {
         </div>
 
         {err && <div className="err" style={{ marginBottom: 10 }}>
-          <b>Could not submit.</b>{err.message}</div>}
+          <b>Could not submit.</b>{dbError(err, 'The survey could not be saved.')}</div>}
 
         <Button variant="dark" type="submit" disabled={busy}>
           {busy ? 'Submitting…' : 'Submit for review'}

@@ -8,6 +8,7 @@ import {
 import { fetchCropHistory } from '../lib/queries'
 import { useFacts } from '../lib/useFacts'
 import { useQuery } from '../lib/useQuery'
+import { INDICES } from '../lib/indices'
 
 /**
  * Screen 4 — spectral indices by district.
@@ -24,34 +25,6 @@ import { useQuery } from '../lib/useQuery'
  * rolling 5-day series, so there are no composites to step between. The season
  * selector in the header is the real equivalent and is what this screen uses.
  */
-const INDICES = {
-  ndvi: {
-    label: 'NDVI', ramp: RAMPS.ndvi, lo: 0.2, hi: 0.8,
-    formula: '(NIR − Red) / (NIR + Red)',
-    about: 'Canopy greenness and vigour. The index the yield model leans on most.',
-  },
-  evi: {
-    label: 'EVI', ramp: RAMPS.ndvi, lo: 0.1, hi: 0.6,
-    formula: '2.5 × (NIR − Red) / (NIR + 6·Red − 7.5·Blue + 1)',
-    about: 'Enhanced vegetation index. Saturates less than NDVI over a dense canopy.',
-  },
-  ndwi: {
-    label: 'NDWI', ramp: [...RAMPS.water].reverse(), lo: -0.2, hi: 0.3,
-    formula: '(Green − NIR) / (Green + NIR)',
-    about: 'Canopy and surface water. Falling NDWI on a standing crop points at irrigation gaps.',
-  },
-  savi: {
-    label: 'SAVI', ramp: RAMPS.ndvi, lo: 0.1, hi: 0.6,
-    formula: '1.5 × (NIR − Red) / (NIR + Red + 0.5)',
-    about: 'Soil-adjusted. More reliable than NDVI early in a season, over partial cover.',
-  },
-  nbr: {
-    label: 'NBR', ramp: RAMPS.ndvi, lo: 0.0, hi: 0.5,
-    formula: '(NIR − SWIR2) / (NIR + SWIR2)',
-    about: 'Normalised burn ratio. Residue burning and burn scars.',
-  },
-}
-
 export default function SatellitePage({ dims, crop, season, cropRow, seasonRow }) {
   const facts = useFacts({ dims, crop, season })
   const history = useQuery(() => fetchCropHistory({ cropId: crop }), [crop], { enabled: Boolean(crop) })

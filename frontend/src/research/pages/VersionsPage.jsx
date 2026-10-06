@@ -4,6 +4,7 @@ import { fmtDate } from '../../gov/lib/fmt'
 import { useQuery } from '../../gov/lib/useQuery'
 import { canTrain } from '../lib/access'
 import { fetchDatasetVersions, uploadDataset } from '../lib/queries'
+import { dbError } from '../../lib/dbError'
 
 /**
  * Screen 3 — dataset versioning.
@@ -49,7 +50,7 @@ export default function VersionsPage({ profile, say, go }) {
     } catch (e2) {
       // The ML service's validator message, verbatim: it names the column that
       // is missing. Nothing was written when this fires -- no row, no file.
-      setErr(String(e2.message || e2))
+      setErr(dbError(e2, 'The upload failed.'))
     } finally {
       setBusy(false)
     }

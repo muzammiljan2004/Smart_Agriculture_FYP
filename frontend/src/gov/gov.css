@@ -169,7 +169,16 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover td{background:var(--g50)}tbody tr
 .spread{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .btn:focus-visible,.tab:focus-visible,.ni:focus-visible,.si:focus-visible,.toggle:focus-visible,select:focus-visible{outline:2px solid var(--g500);outline-offset:2px}
 /* maps */
-.mapbox{position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#2b3a22}
+/* isolation is load-bearing, not decoration. Leaflet gives its own panes
+   z-index 400-700 and its zoom/layer controls 1000, and .maplegend/.mapbadge
+   below sit at 900. `position:relative` with z-index:auto creates NO stacking
+   context, so all of those were competing in the ROOT context -- where they
+   beat the sticky header (z-index 20) and the sidebar (30), and the map drew
+   over the crop and season pickers. `isolation:isolate` makes this box a
+   stacking context, so everything inside it is ordered relative to each other
+   and the box as a whole sits under the chrome, which is what the numbers
+   above always intended. */
+.mapbox{position:relative;isolation:isolate;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#2b3a22}
 .map{position:absolute;inset:0;background:
   radial-gradient(circle at 20% 30%,rgba(120,140,70,.5),transparent 40%),radial-gradient(circle at 70% 60%,rgba(150,120,70,.45),transparent 45%),radial-gradient(circle at 40% 85%,rgba(90,120,60,.5),transparent 40%),#33432a}
 .maplegend{position:absolute;left:10px;bottom:10px;z-index:900;background:rgba(251,251,246,.94);color:#13261c;border-radius:8px;padding:7px 10px;font-size:10.5px;box-shadow:0 1px 4px rgba(0,0,0,.2);min-width:150px}
@@ -183,7 +192,7 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover td{background:var(--g50)}tbody tr
 /* leaflet: only the design's own overrides. The core stylesheet comes from the
    installed `leaflet` package, imported at the top of this file -- the design
    inlined it because it was a single standalone file with no bundler. */
-.leaflet-container{font:inherit;background:#2b3a22}
+.leaflet-container{font:inherit;background:#2b3a22;isolation:isolate}
 .leaflet-bar{border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.25)}
 .leaflet-bar a{display:block;width:28px;height:28px;line-height:28px;text-align:center;background:rgba(251,251,246,.96);color:#13261c;text-decoration:none;font:600 15px/28px var(--sans);border-bottom:1px solid #e1e4d6;cursor:pointer}
 .leaflet-bar a:last-child{border-bottom:0}.leaflet-bar a:hover{background:#d8e9dc}

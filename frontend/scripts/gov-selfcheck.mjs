@@ -170,6 +170,30 @@ check('an empty set exports nothing rather than a bare header', () => {
 })
 
 
+console.log('\na map cannot draw over the app chrome')
+/* Leaflet gives its own panes z-index 400-700 and its zoom/layer controls 1000;
+ * .maplegend, .tilewarn and .mapbadge sit at 900. The header is 20 and the
+ * sidebar 30. `position:relative` with z-index:auto creates NO stacking context,
+ * so every one of those numbers competed in the ROOT context and won -- the map
+ * drew over the crop and season pickers in the header. */
+{
+  const govCss = readFileSync(new URL('../src/gov/gov.css', import.meta.url), 'utf8')
+  const rule = (sel) => govCss.match(new RegExp('\\' + sel + '\\{[^}]*\\}'))?.[0] ?? ''
+  check('the map box is a stacking context of its own', () =>
+    assert.match(rule('.mapbox'), /isolation:\s*isolate/))
+  check('and so is any leaflet container outside it', () =>
+    assert.match(rule('.leaflet-container'), /isolation:\s*isolate/))
+  check('the farmer stylesheet isolates leaflet too', () =>
+    assert.match(readFileSync(new URL('../src/index.css', import.meta.url), 'utf8'),
+      /\.leaflet-container\s*\{[^}]*isolation:\s*isolate/))
+  // Isolation only contains what is INSIDE the box; the chrome still needs to
+  // outrank the box itself.
+  const top = Number(rule('.top').match(/z-index:(\d+)/)?.[1])
+  const side = Number(rule('.side').match(/z-index:(\d+)/)?.[1])
+  check('the header and sidebar keep a z-index (' + top + ', ' + side + ')', () =>
+    assert.ok(top > 0 && side > 0))
+}
+
 console.log('\none theme preference, reachable from every entry point')
 /* The dark token sets already existed in gov.css; what did not exist was any
  * way to reach them outside the government portal's Settings screen. These

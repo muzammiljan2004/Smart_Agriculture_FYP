@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabase'
 import { title } from '../lib/format'
 import { Badge, Button, Card, CardHead, PageHead, Skeleton } from '../components/ui'
+import { dbError } from '../lib/dbError'
 
 /** Every alert across the caller's farms.
  *
@@ -23,7 +24,7 @@ function useAlerts(farms) {
       .order('triggered_at', { ascending: false })
       .then(({ data, error }) => {
         if (!alive) return
-        if (error) setErr(error.message)
+        if (error) setErr(dbError(error, 'Alerts could not be loaded.'))
         else setRows(data ?? [])
       })
     return () => { alive = false }

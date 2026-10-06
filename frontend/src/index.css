@@ -138,3 +138,10 @@ select optgroup {
   color: var(--color-ink);
 }
 select { accent-color: var(--color-leaf-700); }
+
+/* Leaflet assigns its panes z-index 400-700 and its controls 1000. Without a
+   stacking context of its own, a map competes with the app chrome in the root
+   context and draws over the sticky header -- which is exactly what happened on
+   the government portal. Isolating the container keeps that ordering internal.
+   Applies to the farm maps and the registration location picker alike. */
+.leaflet-container { isolation: isolate; }

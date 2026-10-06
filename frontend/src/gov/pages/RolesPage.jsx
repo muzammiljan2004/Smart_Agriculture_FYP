@@ -8,6 +8,7 @@ import {
 } from '../lib/access'
 import { fetchProfiles, provisionProfile, updateProfile } from '../lib/queries'
 import { useQuery } from '../lib/useQuery'
+import { dbError } from '../../lib/dbError'
 
 /**
  * Screen 14 — user and access management.
@@ -153,7 +154,7 @@ export default function RolesPage({ dims, profile, say }) {
                                           try {
                                             await updateProfile(u.id, { district_id: e.target.value })
                                             say(`${u.full_name} reassigned`); q.reload()
-                                          } catch (err) { say(err.message) }
+                                          } catch (err) { say(dbError(err)) }
                                         }}>
                                   {dims.districts.map((d) => (
                                     <option key={d.id} value={d.id}>{d.name}</option>
@@ -169,7 +170,7 @@ export default function RolesPage({ dims, profile, say }) {
                                           try {
                                             await updateProfile(u.id, { designation: e.target.value })
                                             say(`${u.full_name} updated`); q.reload()
-                                          } catch (err) { say(err.message) }
+                                          } catch (err) { say(dbError(err)) }
                                         }}>
                                   {Object.entries(DESIGNATIONS).map(([k, l]) => (
                                     <option key={k} value={k}>{l}</option>
@@ -188,7 +189,7 @@ export default function RolesPage({ dims, profile, say }) {
                                 try {
                                   await updateProfile(u.id, { status: next })
                                   say(`${u.full_name} ${next}`); q.reload()
-                                } catch (err) { say(err.message) }
+                                } catch (err) { say(dbError(err)) }
                               }}>
                                 {u.status === 'active' ? 'Deactivate' : 'Reactivate'}
                               </Button>
@@ -387,7 +388,7 @@ function ProvisionForm({ me, tier, dims, say, onDone }) {
         </div>
 
         {err && <div className="err" style={{ marginBottom: 10 }}>
-          <b>Could not provision.</b>{err.message}
+          <b>Could not provision.</b>{dbError(err, 'The account could not be created.')}
         </div>}
 
         {done && (

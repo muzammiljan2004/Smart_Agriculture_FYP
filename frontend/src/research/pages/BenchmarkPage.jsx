@@ -9,6 +9,7 @@ import { canEditBenchmarks } from '../lib/access'
 import {
   addBenchmark, deleteBenchmark, fetchBenchmarks, fetchVersions, updateBenchmark,
 } from '../lib/queries'
+import { dbError } from '../../lib/dbError'
 
 /**
  * Screen 9 — benchmark comparison.
@@ -98,7 +99,7 @@ export default function BenchmarkPage({ profile, say }) {
       say(row.id ? 'Benchmark updated' : 'Benchmark added')
       q.reload()
     } catch (e) {
-      setErr(String(e.message || e))
+      setErr(dbError(e))
     }
   }
 
@@ -228,7 +229,7 @@ export default function BenchmarkPage({ profile, say }) {
                             </button>
                             <button className="btn sm" onClick={async () => {
                               try { await deleteBenchmark(b.id); say('Reference removed'); q.reload() }
-                              catch (e) { say(String(e.message || e)) }
+                              catch (e) { say(dbError(e)) }
                             }}>Remove</button>
                           </div>
                         </td>

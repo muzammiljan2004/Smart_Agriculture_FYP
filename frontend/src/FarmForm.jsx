@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import LocationPicker from './components/LocationPicker'
+import { dbError } from './lib/dbError'
 
 // All 34 Punjab districts the pipeline has data for. Must match the CHECK in
 // supabase/migrations/20260927020000_all_punjab_districts.sql, which is itself
@@ -185,7 +186,7 @@ export default function FarmForm({ onCreated, onCancel, chrome = true }) {
       .single()
 
     setBusy(false)
-    if (error) return setErr(error.message)
+    if (error) return setErr(dbError(error, 'The farm could not be saved.'))
     onCreated(data)
   }
 

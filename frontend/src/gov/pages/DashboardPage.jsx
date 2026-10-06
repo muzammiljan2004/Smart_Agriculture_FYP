@@ -1,12 +1,13 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import GovMap from '../GovMap'
 import { HRows } from '../lib/charts'
 import { ALERT_COLOR, ALERT_LABEL, RAMPS, cropColor, dash, f1, mean, norm, ramp, title, yieldDec }
   from '../lib/fmt'
 import {
-  Card, Chip, Empty, Kpi, MapLegendGradient, PageHead, Panel, Provenance, RiskChip,
+  Card, Chip, Empty, Kpi, MapLegendGradient, PageHead, Panel, Provenance, RiskChip, Tabs,
 } from '../lib/ui'
 import { useFacts } from '../lib/useFacts'
+import { INDEX_TABS, INDICES } from '../lib/indices'
 
 /**
  * Screen 1 — provincial (or district-scoped) overview.
@@ -23,6 +24,8 @@ import { useFacts } from '../lib/useFacts'
 export default function DashboardPage({ dims, crop, season, cropRow, seasonRow, alerts, go, setDistrict, profile }) {
   const facts = useFacts({ dims, crop, season })
   const provincial = profile.tier === 'super_admin'
+  const [index, setIndex] = useState('ndvi')
+  const ix = INDICES[index]
 
   const openAlerts = useMemo(
     () => alerts.filter((a) => !a.resolved && (!season || a.season_id === season)),
@@ -126,19 +129,27 @@ export default function DashboardPage({ dims, crop, season, cropRow, seasonRow, 
               </div>
 
               <div className="grid g21">
-                <Card title="Canopy condition by district" sub={`NDVI · ${title(cropRow?.name)}`}
+                <Card title="Canopy condition by district"
+                      sub={`${ix.label} · ${title(cropRow?.name)}`}
                       right={<Chip tone="n">Click a district</Chip>}>
+                  {/* All five indices, not just NDVI. The pipeline computes and
+                      stores every one of them; until now this map could only draw
+                      NDVI, so NDWI -- the one that shows an irrigation gap -- was
+                      reachable only by leaving for the satellite screen. */}
+                  <Tabs items={INDEX_TABS} value={index} onChange={setIndex} />
                   <GovMap
                     id="dash-map" height={400} data={rows}
-                    fill={(d) => (d.indices?.ndvi == null ? null
-                      : ramp(RAMPS.ndvi, norm(d.indices.ndvi, 0.2, 0.8)))}
-                    tip={(d) => `<b>${d.name}</b><br>NDVI ${dash(d.indices?.ndvi)}`
+                    fill={(d) => (d.indices?.[index] == null ? null
+                      : ramp(ix.ramp, norm(d.indices[index], ix.lo, ix.hi)))}
+                    tip={(d) => `<b>${d.name}</b><br>${ix.label} ${dash(d.indices?.[index])}`
                       + (d.actual ? `<br>Reported ${f1(d.actual.yield_t_ha, dec)} t/ha` : '')}
                     onClick={(d) => { setDistrict(d.name); go('district') }}
-                    legend={<MapLegendGradient title="NDVI" stops={RAMPS.ndvi} lo="0.20" hi="0.80"
+                    legend={<MapLegendGradient title={ix.label} stops={ix.ramp}
+                                               lo={ix.lo.toFixed(2)} hi={ix.hi.toFixed(2)}
                                                note="Grey = no imagery loaded" />}
                     badge="Approximate district cells"
                   />
+                  <p className="prov" style={{ marginTop: 8 }}>{ix.about}</p>
                   <Provenance>
                     Cells are nearest-headquarters catchments, not administrative boundaries —
                     gov_districts.geom is not yet populated. Shading is the seasonal Sentinel-2

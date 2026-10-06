@@ -13,6 +13,7 @@ import {
   fetchDatasetVersions, fetchRun, fetchRunLogs, fetchVersions,
   queueEvaluation, queueTraining, setModelStatus, startRun,
 } from '../lib/queries'
+import { dbError } from '../../lib/dbError'
 
 /**
  * Screen 7 — train & run models. The core interactive screen.
@@ -213,7 +214,7 @@ export default function OperationsPage({ profile, dims, say }) {
                 <div className="row" style={{ marginTop: 10 }}>
                   <button className="btn sm" onClick={async () => {
                     try { await startRun(activeId); say('Start signal sent') }
-                    catch (e) { say(String(e.message || e)) }
+                    catch (e) { say(dbError(e)) }
                   }}>
                     Send start signal again
                   </button>
@@ -267,7 +268,7 @@ function ActionA({ profile, dims, versions, datasets, datasetsQ, onQueued, say }
       // The run row may exist even though the hand-off failed; point at it
       // so the log and the "send start signal again" button are reachable.
       if (e.runId) onQueued(e.runId)
-      setErr(String(e.message || e))
+      setErr(dbError(e))
     } finally {
       setBusy(false)
     }
@@ -435,7 +436,7 @@ function ActionB({ profile, dims, versions, datasets, datasetsQ, onQueued, say }
       // The run row may exist even though the hand-off failed; point at it
       // so the log and the "send start signal again" button are reachable.
       if (e.runId) onQueued(e.runId)
-      setErr(String(e.message || e))
+      setErr(dbError(e))
     } finally {
       setBusy(false)
     }
@@ -606,7 +607,7 @@ function ActionC({ versions, say }) {
       setTarget(null)
       versions.reload()
     } catch (e) {
-      setErr(String(e.message || e))
+      setErr(dbError(e))
     } finally {
       setBusy(false)
     }

@@ -7,6 +7,7 @@ import {
   TIERS, canManageAccounts, isSuperAdmin, provisionableTiers, roleLabel,
 } from '../lib/access'
 import { fetchProfiles, provisionProfile, updateProfile } from '../lib/queries'
+import { dbError } from '../../lib/dbError'
 
 /**
  * Screen 11 — user & access management.
@@ -91,7 +92,7 @@ export default function AccessPage({ profile, say }) {
       say('Account updated')
       q.reload()
     } catch (e) {
-      say(String(e.message || e))
+      say(dbError(e))
     } finally {
       setBusyId(null)
     }
